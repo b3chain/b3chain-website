@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <style>
+    :root{
+      --bg:#fff;
+      --panel:#fafafa;
+      --text:#1a1a1a;
+      --muted:#555;
+      --line:#ddd;
+      --accent:#1a1a1a;
+      --warn-bg:#f9f6ee;
+      --warn-border:#d4c9a8;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background:var(--bg);
+      color:var(--text);
+      line-height:1.5;
+    }
+    .wrap{max-width:920px;margin:0 auto;padding:28px 18px 56px}
+    header,section,aside{
+      border:1px solid var(--line);
+      border-radius:8px;
+      background:var(--panel);
+      padding:18px;
+    }
+    h1{margin:0;font-size:34px}
+    .subtitle{color:var(--muted);margin-top:10px;max-width:72ch}
+    .tagrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+    .pill{
+      border:1px solid var(--line);
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:13px;
+      color:var(--muted);
+    }
+    .pill b{color:var(--text)}
+    .canonical{
+      font-size:12px;
+      color:var(--muted);
+      margin-top:14px;
+      padding-top:12px;
+      border-top:1px solid var(--line);
+    }
+    .warn{
+      border:1px solid var(--warn-border);
+      background:var(--warn-bg);
+      padding:12px;
+      border-radius:8px;
+      margin-top:12px;
+    }
+    main{margin-top:18px;display:grid;grid-template-columns:1.3fr .7fr;gap:16px}
+    @media(max-width:860px){main{grid-template-columns:1fr}}
+    h2{margin:0 0 10px;font-size:18px}
+    h3{margin:16px 0 8px;font-size:15px}
+    ul{margin:10px 0 0 18px}
+    li{margin:6px 0}
+    .muted{color:var(--muted)}
+    .kvs{
+      display:grid;
+      grid-template-columns:140px 1fr;
+      gap:8px 12px;
+      margin-top:10px;
+    }
+    .kvs div{padding:6px 0;border-bottom:1px dashed var(--line)}
+    pre{
+      font-family:var(--mono);
+      font-size:13px;
+      padding:12px;
+      border-radius:8px;
+      border:1px solid var(--line);
+      background:#f5f5f5;
+      margin-top:10px;
+    }
+    a{color:var(--accent)}
+    footer{margin-top:18px;color:var(--muted);font-size:13px}
+    .hr{height:1px;background:var(--line);margin:14px 0}
+    .small{font-size:13px;color:var(--muted)}
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+
+<header>
+  <h1>b3chain</h1>
+  <p class="subtitle">
+    We're building a conservative Proof-of-Work L1 in the spirit of Bitcoin Core.
+    Work has started; nothing is live.
+  </p>
+
+  <div class="tagrow">
+    <span class="pill">Status: <b>early development</b></span>
+    <span class="pill">Ticker: <b>B3C</b></span>
+    <span class="pill">Focus: <b>minimal PoW L1</b></span>
+    <span class="pill">Approach: <b>conservative by design</b></span>
+  </div>
+
+  <p class="canonical">
+    Only this domain is official for <b>b3chain</b> / <b>B3C</b>. Anything else isn't us.
+  </p>
+
+  <div class="warn">
+    <b>Notice:</b> Nothing is launched. No mainnet, no token, no airdrop, no listing.
+  </div>
+</header>
+
+<main>
+<section>
+  <h2>What this is</h2>
+  <p>
+    <b>b3chain</b> is an attempt at a minimal PoW chain that keeps Bitcoin's system model.
+    No smart contracts, no new token economics — just the chain.
+  </p>
+
+  <h3>What we're not doing</h3>
+  <ul>
+    <li>Token sale or fundraiser</li>
+    <li>Airdrop</li>
+    <li>Smart-contract platform</li>
+    <li>Any promise on launch date or timeline</li>
+    <li>Investment advice</li>
+  </ul>
+
+  <div class="hr"></div>
+
+  <h2>Working hypothesis (non-consensus)</h2>
+  <p class="muted">
+    Below is where we're heading so far. Nothing is frozen; this isn't a spec.
+  </p>
+
+  <div class="kvs">
+    <div>Base</div><div>Bitcoin Core fork</div>
+    <div>Model</div><div>UTXO + Proof-of-Work</div>
+    <div>PoW goal</div><div>Incompatible with Bitcoin SHA-256 ASICs</div>
+    <div>PoW candidate</div><div>double BLAKE3-256 (subject to review)</div>
+    <div>Culture</div><div>minimal change, long-term stability</div>
+  </div>
+
+  <pre>
+PoW(header) = BLAKE3_256(BLAKE3_256(header))
+  </pre>
+
+  <p class="small">
+    We're not claiming permanent ASIC resistance.
+  </p>
+
+  <div class="hr"></div>
+
+  <h2>Identity and impersonation</h2>
+  <p>
+    The name <b>b3chain</b> and ticker <b>B3C</b> mean this project. Anything else is either
+    us elsewhere or someone else — treat it with caution.
+  </p>
+  <p class="small">
+    Only what's linked from this domain is official. No other assets, tokens, or networks
+    using b3chain/B3C are ours unless we say so here.
+  </p>
+</section>
+
+<aside>
+  <h2>Project identifiers</h2>
+  <div class="kvs">
+    <div>Name</div><div>b3chain</div>
+    <div>Ticker</div><div>B3C</div>
+    <div>Stage</div><div>early / pre-launch</div>
+  </div>
+
+  <div class="warn" style="margin-top:14px">
+    <b>Safety:</b> Don't send money or credentials to anyone offering early access.
+  </div>
+</aside>
+</main>
+
+<footer>
+  <p>© <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+
+<script>
+  document.getElementById("y").textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
