@@ -54,6 +54,48 @@ else
   exit 1
 fi
 
+# With webroot, nginx must serve the webroot on port 80 *before* certbot runs (for ACME challenge).
+# We enable ONLY a temporary HTTP-only config (and disable any existing full b3chain.org config
+# so it doesn't take precedence and return 404), reload, run certbot, then write the full HTTPS config.
+if [[ -n "$WEBROOT" ]]; then
+  if command -v nginx &>/dev/null && ( systemctl is-enabled nginx &>/dev/null 2>/dev/null || true ); then
+    echo "[*] Temporary nginx config so Let's Encrypt can reach the webroot ..."
+    SITE_NAME="b3chain.org"
+    if [[ -d /etc/nginx/sites-available ]]; then
+      FULL_ENABLED="/etc/nginx/sites-enabled/${SITE_NAME}"
+      TMP_CONFIG="/etc/nginx/sites-available/${SITE_NAME}-acme"
+      TMP_ENABLED="/etc/nginx/sites-enabled/${SITE_NAME}-acme"
+    else
+      FULL_ENABLED=""
+      TMP_CONFIG="/etc/nginx/conf.d/${SITE_NAME}-acme.conf"
+      TMP_ENABLED="$TMP_CONFIG"
+    fi
+    # Disable full site so only the ACME block handles b3chain.org (avoids 404 when full block loads first)
+    rm -f "$FULL_ENABLED" 2>/dev/null || true
+    cat > "$TMP_CONFIG" << NGINX_ACME_EOF
+# Temporary: port 80 only, so certbot webroot validation works. Replaced by full config after.
+server {
+    listen 80;
+    server_name ${DOMAIN} www.${DOMAIN};
+    root ${WEBROOT};
+    location /.well-known/acme-challenge/ {
+        default_type text/plain;
+        try_files \$uri =404;
+    }
+    location / {
+        return 200 'OK';
+        add_header Content-Type text/plain;
+    }
+}
+NGINX_ACME_EOF
+    if [[ -d /etc/nginx/sites-available ]]; then
+      ln -sf "$TMP_CONFIG" "$TMP_ENABLED" 2>/dev/null || true
+    fi
+    nginx -t && systemctl reload nginx
+    echo "    Reloaded nginx (only ACME block active for ${DOMAIN})."
+  fi
+fi
+
 echo "[*] Obtaining certificate for ${DOMAIN} and www.${DOMAIN} ..."
 
 if [[ -n "$WEBROOT" ]]; then
@@ -154,6 +196,10 @@ NGINX_EOF
 
     if [[ -d /etc/nginx/sites-available && ! -L "$ENABLED" ]]; then
       ln -sf "$CONFIG" "$ENABLED"
+    fi
+    # Remove temporary ACME-only config if we created it (webroot mode)
+    if [[ -n "$WEBROOT" ]]; then
+      rm -f /etc/nginx/sites-enabled/b3chain.org-acme /etc/nginx/sites-available/b3chain.org-acme /etc/nginx/conf.d/b3chain.org-acme.conf 2>/dev/null || true
     fi
     nginx -t && systemctl reload nginx
     echo "    Wrote $CONFIG, enabled, reloaded nginx."
