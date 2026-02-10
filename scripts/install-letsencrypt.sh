@@ -18,6 +18,8 @@
 #   WEBROOT=/var/www/html   use webroot for certbot (and as doc root if DOCROOT unset)
 #   DOCROOT=/var/www/html   where site files are served from (default: WEBROOT or /var/www/html)
 #   WEBSERVER=nginx|apache  force which server to configure (default: auto-detect)
+#   SKIP_DRY_RUN=1          skip running certbot renew at the end
+#   FIX_CONFIG=1            only write and verify nginx/apache config (skip certbot, cron, renew)
 
 set -e
 
@@ -32,6 +34,10 @@ PRIVKEY="${CERT_PATH}/privkey.pem"
 WEBROOT="${WEBROOT:-}"
 DOCROOT="${DOCROOT:-${WEBROOT:-/var/www/html}}"
 WEBSERVER="${WEBSERVER:-}"
+# Set SKIP_DRY_RUN=1 to skip the renewal dry-run at the end.
+SKIP_DRY_RUN="${SKIP_DRY_RUN:-0}"
+# Set FIX_CONFIG=1 to only update and verify web server config (HTTP→HTTPS); skip certbot, cron, renew.
+FIX_CONFIG="${FIX_CONFIG:-0}"
 
 # ---
 
@@ -40,6 +46,14 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+if [[ "$FIX_CONFIG" == "1" ]]; then
+  echo "[*] FIX_CONFIG=1: only updating and verifying web server config (skip certbot)."
+  DOCROOT="${DOCROOT:-${WEBROOT:-/var/www/html}}"
+  CERT_PATH="/etc/letsencrypt/live/${DOMAIN}"
+  FULLCHAIN="${CERT_PATH}/fullchain.pem"
+  PRIVKEY="${CERT_PATH}/privkey.pem"
+  # Fall through to webserver detection and config write below (skip certbot, cron, renew)
+else
 echo "[*] Installing certbot ..."
 
 if command -v apt-get &>/dev/null; then
@@ -57,7 +71,7 @@ fi
 # With webroot, nginx must serve the webroot on port 80 *before* certbot runs (for ACME challenge).
 # We enable ONLY a temporary HTTP-only config (and disable any existing full b3chain.org config
 # so it doesn't take precedence and return 404), reload, run certbot, then write the full HTTPS config.
-if [[ -n "$WEBROOT" ]]; then
+if [[ -n "$WEBROOT" && "$FIX_CONFIG" != "1" ]]; then
   if command -v nginx &>/dev/null && ( systemctl is-enabled nginx &>/dev/null 2>/dev/null || true ); then
     echo "[*] Temporary nginx config so Let's Encrypt can reach the webroot ..."
     SITE_NAME="b3chain.org"
@@ -98,31 +112,34 @@ fi
 
 echo "[*] Obtaining certificate for ${DOMAIN} and www.${DOMAIN} ..."
 
-if [[ -n "$WEBROOT" ]]; then
-  certbot certonly --webroot -w "$WEBROOT" \
-    -d "$DOMAIN" -d "www.$DOMAIN" \
-    --non-interactive --agree-tos -m "$EMAIL"
-else
-  certbot certonly --standalone \
-    -d "$DOMAIN" -d "www.$DOMAIN" \
-    --non-interactive --agree-tos -m "$EMAIL"
-fi
+if [[ "$FIX_CONFIG" != "1" ]]; then
+  if [[ -n "$WEBROOT" ]]; then
+    certbot certonly --webroot -w "$WEBROOT" \
+      -d "$DOMAIN" -d "www.$DOMAIN" \
+      --non-interactive --agree-tos -m "$EMAIL"
+  else
+    certbot certonly --standalone \
+      -d "$DOMAIN" -d "www.$DOMAIN" \
+      --non-interactive --agree-tos -m "$EMAIL"
+  fi
 
-echo "[*] Setting up daily renewal (cron) ..."
+  echo "[*] Setting up daily renewal (cron) ..."
 
 CRON_CMD="certbot renew --quiet"
 CRON_LINE="${CRON_SCHEDULE} root ${CRON_CMD}"
 
-if [[ -d /etc/cron.d ]]; then
-  echo "$CRON_LINE" > /etc/cron.d/certbot-b3chain
-  chmod 644 /etc/cron.d/certbot-b3chain
-  echo "    Wrote /etc/cron.d/certbot-b3chain"
-else
-  ( crontab -l 2>/dev/null | grep -v certbot; echo "${CRON_SCHEDULE} ${CRON_CMD}"; ) | crontab -
-  echo "    Added to root crontab"
+  if [[ -d /etc/cron.d ]]; then
+    echo "$CRON_LINE" > /etc/cron.d/certbot-b3chain
+    chmod 644 /etc/cron.d/certbot-b3chain
+    echo "    Wrote /etc/cron.d/certbot-b3chain"
+  else
+    ( crontab -l 2>/dev/null | grep -v certbot; echo "${CRON_SCHEDULE} ${CRON_CMD}"; ) | crontab -
+    echo "    Added to root crontab"
+  fi
+  fi
 fi
 
-# --- Configure web server: HTTPS + HTTP redirect, then enable and reload
+# --- Configure web server: HTTPS + HTTP redirect, then enable, reload, and verify
 
 detect_webserver() {
   if [[ -n "$WEBSERVER" ]]; then
@@ -201,8 +218,16 @@ NGINX_EOF
     if [[ -n "$WEBROOT" ]]; then
       rm -f /etc/nginx/sites-enabled/b3chain.org-acme /etc/nginx/sites-available/b3chain.org-acme /etc/nginx/conf.d/b3chain.org-acme.conf 2>/dev/null || true
     fi
-    nginx -t && systemctl reload nginx
+    nginx -t || { echo "[!] nginx config test failed. Fix $CONFIG and run: nginx -t && systemctl reload nginx"; exit 1; }
+    systemctl reload nginx
     echo "    Wrote $CONFIG, enabled, reloaded nginx."
+    # Verify HTTP→HTTPS redirect
+    REDIRECT_CODE="$(curl -s -o /dev/null -w '%{http_code}' -H "Host: ${DOMAIN}" http://127.0.0.1/ 2>/dev/null || echo "000")"
+    if [[ "$REDIRECT_CODE" == "301" ]]; then
+      echo "    HTTP→HTTPS redirect verified (301)."
+    else
+      echo "    [!] HTTP redirect check got $REDIRECT_CODE (expected 301). Ensure no other server block catches ${DOMAIN} on port 80."
+    fi
   fi
 
   if [[ "$SERVER" == "apache" ]]; then
@@ -254,6 +279,22 @@ APACHE_EOF
     if command -v apachectl &>/dev/null; then apachectl configtest 2>/dev/null; elif command -v httpd &>/dev/null; then httpd -t 2>/dev/null; fi || true
     $RELOAD_CMD
     echo "    Wrote $CONFIG, enabled, reloaded apache."
+    REDIRECT_CODE="$(curl -s -o /dev/null -w '%{http_code}' -H "Host: ${DOMAIN}" http://127.0.0.1/ 2>/dev/null || echo "000")"
+    if [[ "$REDIRECT_CODE" == "301" ]]; then
+      echo "    HTTP→HTTPS redirect verified (301)."
+    else
+      echo "    [!] HTTP redirect check got $REDIRECT_CODE (expected 301). Check RewriteRule in $CONFIG."
+    fi
+  fi
+fi
+
+if [[ "$FIX_CONFIG" != "1" && "$SKIP_DRY_RUN" != "1" ]]; then
+  echo ""
+  echo "[*] Running renewal (real) ..."
+  if certbot renew --quiet 2>/dev/null; then
+    echo "    Renewal completed (or cert not yet due)."
+  else
+    echo "    Renewal had issues (check with: sudo certbot renew -v)."
   fi
 fi
 
@@ -262,4 +303,5 @@ echo "Done. Certificate and chain:"
 echo "  $FULLCHAIN"
 echo "  $PRIVKEY"
 echo ""
-echo "Renewal runs daily at 03:00. Test with: sudo certbot renew --dry-run"
+echo "Renewal runs daily at 03:00. Test: sudo certbot renew --dry-run; force: sudo certbot renew --force-renewal"
+echo "To only fix/verify HTTP→HTTPS config: sudo FIX_CONFIG=1 DOCROOT=/var/www/b3chain ./install-letsencrypt.sh"
