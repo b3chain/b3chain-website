@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; H-1 PoW / Block-ID Isolation</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  <a href="/testing/security-audit.html">Phase 11</a> /
+  H-1 PoW isolation
+</div>
+
+<header>
+  <h1>H-1 &mdash; PoW / Block-ID Hash Isolation</h1>
+  <p class="subtitle">
+    b3chain inherits Bitcoin's SHA-256d block-identity hash but replaces
+    the proof-of-work hash with double BLAKE3-256. The two algorithms must
+    never be mixed up, and every PoW check site must use the right one.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Script: <b>audit-pow-isolation.py</b></span>
+    <span class="pill">Runtime: <b>~1 s</b></span>
+    <span class="pill">Status: <b><span class="status-pass">7 / 7 PASS</span></b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. The dual-hash architecture</h2>
+  <div class="diagram">
+<pre>CBlockHeader (80 bytes)
+   |
+   +-- GetHash()      = SHA-256d(serialize(header))   --&gt; block ID, txid context, p2p inv, header chain
+   |
+   +-- GetPoWHash()   = BLAKE3d(serialize(header))    --&gt; CheckProofOfWork(...) only</pre>
+  </div>
+  <p>
+    Two methods, two algorithms, one input. Every consensus call site must
+    pick the right one, and the audit verifies this statically and on a
+    live regtest block.
+  </p>
+</section>
+
+<section>
+  <h2>2. What is being audited</h2>
+  <ul>
+    <li><b>Static call-site scan.</b> Every <code>CheckProofOfWork(...)</code>
+        invocation in the source tree must pass a value derived from
+        <code>GetPoWHash()</code>. Direct use of <code>GetHash()</code> is
+        flagged.</li>
+    <li><b>Static implementation scan.</b> The PoW hashing implementation
+        in <code>src/primitives/block.cpp</code> must reference BLAKE3.</li>
+    <li><b>Header API scan.</b> <code>CBlockHeader</code> in
+        <code>src/primitives/block.h</code> must declare both
+        <code>GetHash()</code> and <code>GetPoWHash()</code>.</li>
+    <li><b>Functional check.</b> Mine a regtest block and verify:
+      <ul>
+        <li>Re-serialising and SHA-256d-ing the header reproduces the
+            block ID returned by <code>getblockhash</code>.</li>
+        <li>BLAKE3d of the same bytes is a different value.</li>
+        <li>The BLAKE3d value (interpreted as little-endian uint256) is
+            below the block's compact target.</li>
+      </ul>
+    </li>
+  </ul>
+</section>
+
+<section>
+  <h2>3. Why it matters</h2>
+  <p>
+    A bug here can fork the network in two distinct ways:
+  </p>
+  <ol>
+    <li>If the chain accepts blocks where SHA-256d of the header is below
+        target (instead of BLAKE3d), then any pre-existing Bitcoin ASIC can
+        instantly attack b3chain. The whole reason for BLAKE3 disappears.</li>
+    <li>If <code>getblockhash</code> returns the BLAKE3 hash instead of
+        the SHA-256d hash, every block explorer, light client, and
+        Merkle-proof verifier breaks immediately.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>4. How to run</h2>
+<pre>cd b3chain
+pip3 install blake3   # for the functional check
+python3 contrib/testing/audit/audit-pow-isolation.py</pre>
+</section>
+
+<section>
+  <h2>5. Expected output</h2>
+<pre>[H-1] PoW / Block-ID hash isolation
+========================================================================
+  PASS  [H-1] 2 CheckProofOfWork call site(s) all use GetPoWHash
+  PASS  [H-1] PoW hashing references BLAKE3 (src/primitives/block.cpp, src/primitives/block.h)
+  PASS  [H-1] CBlockHeader::GetHash() declared
+  PASS  [H-1] CBlockHeader::GetPoWHash() declared
+
+  Spawning regtest node and verifying live block hash relationships...
+  PASS  [H-1] getblockhash() returns SHA-256d (block ID), not BLAKE3
+  PASS  [H-1] block ID and BLAKE3 PoW hash are different  id=68c337ef569de154...  pow=3adf8417d7586ce7...
+  PASS  [H-1] mined block's BLAKE3 PoW hash <= target  hash_int < target: True
+------------------------------------------------------------------------
+  7/7 checks passed in 1.3s
+AUDIT RESULT: PASS  [H-1]</pre>
+</section>
+
+<section>
+  <h2>6. Common pitfalls</h2>
+  <ul>
+    <li><b>Variable name confusion.</b> The audit also matches
+        <code>pow_hash</code> / <code>powhash</code> identifiers, but if
+        you store the PoW hash in a generic <code>uint256 hash</code>
+        variable the audit cannot tell which algorithm produced it &mdash;
+        prefer descriptive names.</li>
+    <li><b>Forward declarations.</b> Lines like
+        <code>bool CheckProofOfWork(uint256 hash, ...)</code> are
+        whitelisted (function parameter, not a call). The audit detects
+        this with a regex on <code>uint256 hash</code>.</li>
+    <li><b>Headers chain check.</b> Bitcoin's
+        <code>HeadersChainSync</code> verifies cumulative work using the
+        target derived from <code>nBits</code>, not the actual hash, so
+        it is unaffected by this isolation.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>7. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-pow-isolation.py">
+        contrib/testing/audit/audit-pow-isolation.py</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/primitives/block.cpp">
+        src/primitives/block.cpp</a> &mdash;
+        <code>GetHash</code> and <code>GetPoWHash</code> definitions</li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/pow.cpp">
+        src/pow.cpp</a> &mdash; <code>CheckProofOfWork</code></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/validation.cpp#L3927">
+        src/validation.cpp</a> &mdash; the two consensus call sites</li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/audit-supply-cap.html">C-1..C-4 supply cap</a>
+  <a class="next" href="/testing/audit-network-isolation.html">N-1 network isolation</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

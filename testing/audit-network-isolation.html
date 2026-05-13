@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; N-1 Network Isolation</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  <a href="/testing/security-audit.html">Phase 11</a> /
+  N-1 network isolation
+</div>
+
+<header>
+  <h1>N-1 &mdash; Network Isolation</h1>
+  <p class="subtitle">
+    b3chain must be a fully separate P2P network from Bitcoin. Different
+    magic bytes, different DNS seeds, different default port. A b3chaind
+    talking to a Bitcoin node must immediately disconnect, and vice versa.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Script: <b>audit-network-isolation.py</b></span>
+    <span class="pill">Runtime: <b>~3 s</b></span>
+    <span class="pill">Status: <b><span class="status-pass">15 / 15 PASS</span></b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Magic-bytes table</h2>
+  <table>
+    <thead>
+      <tr><th>Chain</th><th>b3chain magic</th><th>Bitcoin magic</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>mainnet</td><td><code class="hash">b3 c0 01 0d</code></td><td><code class="hash">f9 be b4 d9</code></td></tr>
+      <tr><td>testnet</td><td><code class="hash">b3 c1 02 0e</code></td><td><code class="hash">0b 11 09 07</code></td></tr>
+      <tr><td>testnet4</td><td><code class="hash">1c 16 3f 28</code></td><td><code class="hash">1c 16 3f 28</code> (intentionally identical &mdash; testnet4 is rarely used)</td></tr>
+      <tr><td>regtest</td><td><code class="hash">b3 c2 03 0f</code></td><td><code class="hash">fa bf b5 da</code></td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    The audit accepts the testnet4 collision (testnet4 is a developer
+    network that doesn't autoconnect to public peers). Mainnet, testnet,
+    and regtest must all be unique vs Bitcoin.
+  </p>
+</section>
+
+<section>
+  <h2>2. What is being audited</h2>
+  <ul>
+    <li><b>Static.</b> Every <code>pchMessageStart[*] = 0x..;</code> block
+        in <code>src/kernel/chainparams.cpp</code> is parsed and checked
+        against the Bitcoin magics table.</li>
+    <li><b>Static.</b> The DNS seed list contains zero forbidden hosts
+        (<code>seed.bitcoin.sipa.be</code>,
+        <code>dnsseed.bluematt.me</code>, etc.).</li>
+    <li><b>Static.</b> Mainnet's <code>CMainParams</code> body explicitly
+        calls <code>vFixedSeeds.clear()</code> and
+        <code>vSeeds.clear()</code> &mdash; preventing accidentally
+        inheriting Bitcoin's seed lists.</li>
+    <li><b>Functional.</b> A live regtest node must drop / ignore a
+        connection that opens with the Bitcoin mainnet magic, and accept
+        one that opens with the b3chain regtest magic.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>3. Why it matters</h2>
+  <p>
+    Two kinds of disasters this prevents:
+  </p>
+  <ol>
+    <li><b>Cross-chain peering.</b> If b3chain accepted Bitcoin magic, the
+        first b3chain mainnet node we deploy would be flooded with
+        connections from honest Bitcoin nodes. They would then receive
+        unparseable b3chain data, log errors, and (depending on the
+        version) disconnect us &mdash; or, worse, accept our headers.</li>
+    <li><b>Address collisions.</b> If users could mistake b3chain
+        addresses for Bitcoin addresses, they would lose money. Distinct
+        bech32 HRPs (<code>b3</code>, <code>tb3</code>, <code>b3rt</code>)
+        and base58 prefixes prevent that. See also
+        <a href="/testing/audit-address-rejection.html">W-1</a>.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>4. How to run</h2>
+<pre>cd b3chain
+python3 contrib/testing/audit/audit-network-isolation.py</pre>
+</section>
+
+<section>
+  <h2>5. Expected output</h2>
+<pre>[N-1] Network isolation (magic, DNS seeds)
+========================================================================
+  PASS  [N-1] found 4 explicit magic-start declarations
+  PASS  [N-1] magic b3c0010d != Bitcoin mainnet magic
+  PASS  [N-1] magic b3c0010d not a Bitcoin mainnet/regtest/signet magic
+  PASS  [N-1] magic b3c1020e != Bitcoin mainnet magic
+  PASS  [N-1] magic b3c1020e not a Bitcoin mainnet/regtest/signet magic
+  PASS  [N-1] magic 1c163f28 != Bitcoin mainnet magic
+  PASS  [N-1] magic 1c163f28 not a Bitcoin mainnet/regtest/signet magic
+  PASS  [N-1] magic b3c2030f != Bitcoin mainnet magic
+  PASS  [N-1] magic b3c2030f not a Bitcoin mainnet/regtest/signet magic
+  PASS  [N-1] no forbidden Bitcoin DNS seeds present
+  PASS  [N-1] mainnet calls vFixedSeeds.clear()
+  PASS  [N-1] mainnet calls vSeeds.clear()
+
+  Spawning regtest node and probing P2P port with Bitcoin magic...
+  PASS  [N-1] node disconnects/ignores Bitcoin mainnet magic on P2P port
+  PASS  [N-1] sanity: correct b3chain regtest magic gets a reply
+  PASS  [N-1] getnetworkinfo responds with networkactive flag
+------------------------------------------------------------------------
+  15/15 checks passed in 3.2s
+AUDIT RESULT: PASS  [N-1]</pre>
+</section>
+
+<section>
+  <h2>6. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-network-isolation.py">
+        contrib/testing/audit/audit-network-isolation.py</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/kernel/chainparams.cpp">
+        src/kernel/chainparams.cpp</a> &mdash; magic bytes, DNS seed lists</li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/audit-pow-isolation.html">H-1 PoW isolation</a>
+  <a class="next" href="/testing/audit-address-rejection.html">W-1 address rejection</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

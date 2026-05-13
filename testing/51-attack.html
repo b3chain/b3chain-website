@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; 51% Attack: Live Demo &amp; Defences</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  <a href="/testing/security-audit.html">Phase 11</a> /
+  51% Attack
+</div>
+
+<header>
+  <h1>The 51% Attack: Live Demo &amp; Defences</h1>
+  <p class="subtitle">
+    A 51% attack is the most-discussed risk for any proof-of-work chain.
+    This page explains what it is, walks through a live regtest
+    reproduction, gives the math behind the safety margin, calculates the
+    cost on real hardware, and lists the defences both b3chain and the
+    user can apply.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Demo: <b>audit-51-attack-sim.py</b></span>
+    <span class="pill">Math: <b>Nakamoto §11</b></span>
+    <span class="pill">Status: <b><span class="status-pass">live demo PASS</span></b></span>
+  </div>
+
+  <div class="warn">
+    <b>Educational only.</b> This page demonstrates how the attack works
+    on a local regtest network. Do not attempt this on any live
+    production chain &mdash; you will lose money and may break the law.
+  </div>
+</header>
+
+<div class="content">
+
+<!-- ================================================================ -->
+<section id="what">
+  <h2>1. What a 51% attack actually is <a class="anchor" href="#what">#</a></h2>
+  <p>
+    Bitcoin and b3chain choose the canonical chain by picking the one with
+    the most cumulative proof-of-work. If a single entity controls more
+    than 50% of the hashrate, they can mine a private chain in secret and,
+    once it has more work than the public chain, reveal it. Every honest
+    node will switch to the longer chain because that is what consensus
+    tells them to do.
+  </p>
+
+  <div class="diagram">
+<pre>            block                              this block paid Bob
+              |                                          |
+genesis ----- 1 ----- 2 ----- 3 ----- 4 ----- 5 ----- [6] ----- 7 ----- 8     (honest chain)
+              |                                          |
+              \                                          \--- mempool tx (NOT in attacker chain)
+               \
+                \-- 1' ----- 2' ----- 3' ----- 4' ----- 5' ----- 6' ----- 7' ----- 8'   (attacker chain, secret)
+                                                                          ^
+                                                              attacker chain is now LONGER
+                                                              attacker reveals; honest nodes reorg
+                                                              tx that paid Bob is REVERSED</pre>
+  </div>
+
+  <p>
+    The transaction that paid Bob existed only on the honest chain.
+    After the reorg, Bob's wallet sees its 6-confirmation deposit
+    disappear and the attacker's address holds the funds instead.
+  </p>
+</section>
+
+<!-- ================================================================ -->
+<section id="math">
+  <h2>2. The math: Nakamoto's reorg-success formula <a class="anchor" href="#math">#</a></h2>
+  <p>
+    From <a href="https://bitcoin.org/bitcoin.pdf">Bitcoin: A Peer-to-Peer
+    Electronic Cash System</a> (§11). Let <i>q</i> be the attacker's
+    fraction of total hashrate, <i>z</i> the number of confirmations the
+    victim waited for. The probability the attacker eventually overtakes
+    the honest chain is approximately:
+  </p>
+<pre>P(success) = 1 - sum_{k=0}^{z} { e^(-zq/(1-q)) * (zq/(1-q))^k / k! } * ( 1 - (q/(1-q))^(z-k) )</pre>
+
+  <h3>Reorg-success probability table</h3>
+  <table>
+    <thead>
+      <tr><th>q (attacker hashrate)</th><th>z = 1</th><th>z = 3</th><th>z = 6</th><th>z = 10</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>10%</td><td>20.46%</td><td>1.32%</td><td>0.02%</td><td>0.00%</td></tr>
+      <tr><td>20%</td><td>41.59%</td><td>10.32%</td><td>1.43%</td><td>0.11%</td></tr>
+      <tr><td>30%</td><td>62.77%</td><td>32.46%</td><td>13.21%</td><td>4.17%</td></tr>
+      <tr><td>40%</td><td>82.89%</td><td>66.42%</td><td>50.40%</td><td>36.00%</td></tr>
+      <tr><td>45%</td><td>91.98%</td><td>84.44%</td><td>76.61%</td><td>68.54%</td></tr>
+      <tr><td>50%</td><td>100%</td><td>100%</td><td>100%</td><td>100%</td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Once the attacker has &gt; 50% of hashrate, success is certain on a
+    long enough timeline. The interesting question is "how many
+    confirmations protect against an attacker with X%?". For a 30%
+    adversary, 6 confirmations gives 87% safety; 10 confirmations gives
+    96%.
+  </p>
+</section>
+
+<!-- ================================================================ -->
+<section id="cost">
+  <h2>3. Cost calculator <a class="anchor" href="#cost">#</a></h2>
+  <p>
+    Hashrate isn't free. To control 51% of a chain's hashrate for the
+    duration of an attack you need to either own that much equipment, or
+    rent it. The table below assumes the attacker rents.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Scenario</th><th>z (confs)</th><th>Attack window</th><th>Indicative cost</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Tiny altcoin (~10 PH/s total)</td><td>6</td><td>~1 hour</td><td>~$50&ndash;500 of cloud compute</td></tr>
+      <tr><td>Mid-cap PoW chain (~1 EH/s)</td><td>6</td><td>~1 hour</td><td>~$10 000&ndash;100 000</td></tr>
+      <tr><td>Bitcoin mainnet (~600 EH/s)</td><td>6</td><td>~1 hour</td><td>~$300 million (no rental market that deep exists)</td></tr>
+      <tr><td>Early b3chain (post-launch, low hashrate)</td><td>6</td><td>~1 hour</td><td>at risk &mdash; see <a href="#defences">defences</a></td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Numbers are illustrative. The point is: <b>attack cost scales with
+    network hashrate &times; attack duration</b>. Live tracking of these
+    numbers for various PoW chains is at
+    <a href="https://www.crypto51.app/">crypto51.app</a>.
+  </p>
+</section>
+
+<!-- ================================================================ -->
+<section id="demo">
+  <h2>4. Live regtest demo <a class="anchor" href="#demo">#</a></h2>
+  <p>
+    The audit script <code>audit-51-attack-sim.py</code> reproduces a
+    full reorg end-to-end on a local regtest network. It is short
+    (about 12 seconds) and prints a step-by-step educational commentary.
+  </p>
+
+  <h3>What the demo does</h3>
+  <ol>
+    <li>Spawns two completely isolated regtest clusters: one
+        <b>honest</b> (Alice the miner, Bob the victim) and one
+        <b>attacker</b> (Mallory).</li>
+    <li>Both clusters mine 110 blocks privately to get spendable coinbase
+        outputs.</li>
+    <li>On the honest chain, Alice sends Bob 25 B3C; Alice mines 6 more
+        blocks &mdash; from Bob's view the payment has 6 confirmations
+        and is "safe".</li>
+    <li>The attacker secretly mines 8 blocks from the same parent,
+        replacing Bob's payment with a payment to Mallory's own
+        address.</li>
+    <li>The clusters are connected. The honest node sees the attacker's
+        chain has more work and switches to it.</li>
+    <li>Bob's wallet shows a 0-confirmation (or "conflicted") balance.
+        The funds are gone.</li>
+  </ol>
+
+  <h3>Run it</h3>
+<pre>cd b3chain
+python3 contrib/testing/audit/audit-51-attack-sim.py</pre>
+
+  <h3>Annotated expected output</h3>
+<pre>========================================================================
+  51% ATTACK SIMULATION (regtest, educational)
+========================================================================
+   ⓘ  ... educational explanation ...
+
+[step 1] Spawning isolated honest + attacker clusters
+[step 2] Both clusters mine 110 blocks (need spendable coinbase)
+              honest cluster: height=110  tip=...
+              attacker cluster: height=110  tip=...
+
+[step 3] On the HONEST chain Alice pays Bob 25 B3C, miner mines 6 confirmations
+     honest payment txid     : 0a...
+     Bob balance after 6 confirms: 25.0 B3C
+  PASS  [A-1] Bob's payment is confirmed >=6 times on the honest chain
+
+[step 4] In SECRET the attacker mines 8 blocks (reach honest height + lead)
+     attacker self-pay txid  : b1...
+              attacker cluster: height=118  tip=...
+
+[step 5] ATTACKER REVEALS the longer chain (connect honest <-> attacker)
+  PASS  [A-1] honest node reorged onto attacker chain (more PoW wins)
+
+[step 6] Verify Bob's payment is REVERSED
+  PASS  [A-1] Bob's transaction has 0 or negative confirmations after reorg
+     Bob balance before reorg: 25.0 B3C
+     Bob balance after reorg : 0.0 B3C
+  PASS  [A-1] Bob's wallet balance decreased after the reorg
+
+========================================================================
+  RESULT: Bob has been double-spent
+========================================================================
+   ⓘ  A 51%-capable attacker reversed a 6-confirmation transaction.
+   ⓘ  ... defence guidance ...
+
+------------------------------------------------------------------------
+  4/4 checks passed in 12.2s
+AUDIT RESULT: PASS  [A-1]</pre>
+</section>
+
+<!-- ================================================================ -->
+<section id="defences">
+  <h2>5. How b3chain helps <a class="anchor" href="#defences">#</a></h2>
+  <ul>
+    <li><b>BLAKE3 PoW.</b> Bitcoin's SHA-256 ASIC industry has produced
+        very concentrated hashrate. BLAKE3 is new enough that no
+        large-scale ASIC line exists, so early b3chain hashrate is
+        unlikely to be dominated by a single industrial farm. This
+        advantage erodes as the chain matures &mdash; eventually BLAKE3
+        ASICs will exist.</li>
+    <li><b>Conservative consensus.</b> No exotic proof-of-stake or finality
+        gadget that could open new attack surfaces. The only PoW behaviour
+        change is the algorithm itself.</li>
+    <li><b>Public test corpus.</b> Every consensus invariant has an
+        automated audit (this site). A regression that, e.g., accepted the
+        wrong PoW hash would be caught by H-1 before reaching mainnet.</li>
+  </ul>
+</section>
+
+<section id="user-defences">
+  <h2>6. How users defend themselves <a class="anchor" href="#user-defences">#</a></h2>
+  <ul>
+    <li><b>More confirmations for high-value payments.</b> The Nakamoto
+        table above is the only protection against a determined
+        51%-capable attacker. For a payment worth $1 000, six
+        confirmations is industry standard. For $1 000 000, wait twenty.
+        For $100 000 000, wait until the network is mature.</li>
+    <li><b>Watch for reorgs.</b> Run a node and subscribe to ZMQ
+        block-disconnect notifications. Block explorers also surface
+        reorgs.</li>
+    <li><b>Hot wallet hygiene (exchanges).</b> Limit hot-wallet float;
+        require multiple-confirmation cooling-off for deposits; suspend
+        deposits during hashrate drops.</li>
+    <li><b>Treat unknown senders carefully.</b> A reorg-only attacker
+        usually targets a specific recipient (an exchange listing). If
+        you are an unknown wallet, you are not the target.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>7. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-51-attack-sim.py">
+        contrib/testing/audit/audit-51-attack-sim.py</a></li>
+    <li><a href="https://bitcoin.org/bitcoin.pdf">Nakamoto, S. (2008).
+        <i>Bitcoin: A Peer-to-Peer Electronic Cash System.</i> §11.</a></li>
+    <li><a href="https://www.crypto51.app/">crypto51.app</a> &mdash;
+        live cost-of-attack tracker</li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/audit-hd-coin-type.html">W-2 HD coin_type</a>
+  <a class="next" href="/testing.html">Back to testing hub</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; C-1..C-4 Supply Cap Audit</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  <a href="/testing/security-audit.html">Phase 11</a> /
+  C-1..C-4 supply cap
+</div>
+
+<header>
+  <h1>C-1..C-4 &mdash; Supply Cap &amp; Halving Schedule</h1>
+  <p class="subtitle">
+    Verifies that b3chain inherits Bitcoin's 21M supply cap, that the
+    block subsidy halves at every 210 000 blocks (mainnet) / 150 blocks
+    (regtest), and that subsidy returns exactly 0 once 64 halvings have
+    elapsed (avoiding undefined right-shift behaviour).
+  </p>
+  <div class="tagrow">
+    <span class="pill">Script: <b>audit-supply-cap.py</b></span>
+    <span class="pill">Runtime: <b>~12 s</b></span>
+    <span class="pill">Status: <b><span class="status-pass">9 / 9 PASS</span></b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. What is being audited</h2>
+  <table>
+    <thead><tr><th>ID</th><th>Invariant</th></tr></thead>
+    <tbody>
+      <tr><td>C-1</td><td>Block subsidy halves at every 210 000 blocks (mainnet)</td></tr>
+      <tr><td>C-2</td><td>Sum of all subsidies converges to 20 999 999.97690000 B3C</td></tr>
+      <tr><td>C-3</td><td>Subsidy returns exactly 0 once <code>halvings &ge; 64</code></td></tr>
+      <tr><td>C-4</td><td>Difficulty retarget enforces the 4&times; lower / upper bounds</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>2. Why it matters</h2>
+  <p>
+    The 21M cap is the most-quoted property of Bitcoin. If a single line
+    of <code>GetBlockSubsidy()</code> in <code>src/validation.cpp</code> is
+    miscoded, the whole supply schedule breaks &mdash; and unlike a UI bug
+    you can never undo it once anyone has used the chain. The audit is
+    short, but it is the kind of bug that has bitten other forks (and one
+    that an external auditor will absolutely check first), so we test it
+    with both an analytic argument and live mining on regtest across four
+    halvings.
+  </p>
+</section>
+
+<section>
+  <h2>3. The math</h2>
+  <p>
+    The subsidy at height <code>h</code> on a chain with halving interval
+    <code>I</code> is:
+  </p>
+<pre>subsidy(h) = (50 * COIN) >> floor(h / I)</pre>
+  <p>
+    Total supply is the geometric series:
+  </p>
+<pre>S = I * sum_{n=0}^{63} (50 * COIN) >> n
+  = 50 * COIN * I * (2 - 2^-63)
+  &asymp; 21 000 000 * COIN</pre>
+  <p>
+    For mainnet (<code>I = 210 000</code>) the exact value is
+    <code>2 099 999 997 690 000</code> satoshi
+    (= <code>20 999 999.97690000</code> B3C).
+  </p>
+</section>
+
+<section>
+  <h2>4. How to run</h2>
+<pre>cd b3chain
+python3 contrib/testing/audit/audit-supply-cap.py</pre>
+</section>
+
+<section>
+  <h2>5. Expected output</h2>
+<pre>[C-1..C-4] Supply cap and halving schedule
+========================================================================
+  PASS  [C-2] geometric sum at mainnet interval (210000) equals 20999999.97690000
+  PASS  [C-3] subsidy returns 0 at halving 64
+  PASS  [C-4] CalculateNextWorkRequired retains the 4x retarget bounds
+
+  Spawning regtest node and mining 600 blocks (4 halvings)...
+  PASS  [C-1] subsidy at height 1 (halving 0) = 50.00000000 B3C
+  PASS  [C-1] subsidy at height 151 (halving 1) = 25.00000000 B3C
+  PASS  [C-1] subsidy at height 301 (halving 2) = 12.50000000 B3C
+  PASS  [C-1] subsidy at height 451 (halving 3) = 6.25000000 B3C
+  PASS  [C-2] cumulative subsidy through height 600: 14015.62500000 B3C (matches analytic sum)
+  PASS  [C-1] subsidy halving schedule observed across 4 halvings on regtest
+------------------------------------------------------------------------
+  9/9 checks passed in 11.7s
+AUDIT RESULT: PASS  [C-1..C-4]</pre>
+</section>
+
+<section>
+  <h2>6. Common pitfalls</h2>
+  <ul>
+    <li><b>Right-shift &ge; 64.</b> In C/C++,
+        <code>x &gt;&gt; 64</code> on a 64-bit type is undefined
+        behaviour. The Bitcoin Core implementation guards this with
+        <code>if (halvings &gt;= 64) return 0;</code>. Removing the guard
+        looks innocuous and is a classic fork-killer.</li>
+    <li><b>Off-by-one halving boundaries.</b> The first block paying the
+        new (halved) subsidy is at exactly <code>I</code>, not
+        <code>I &minus; 1</code>. The audit samples block
+        <code>I + 1</code> for each halving epoch to catch this.</li>
+    <li><b>Coinbase fees vs subsidy.</b> Block reward = subsidy + fees.
+        The audit only mines empty blocks, so coinbase value equals the
+        subsidy exactly.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>7. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-supply-cap.py">
+        contrib/testing/audit/audit-supply-cap.py</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/validation.cpp#L1922">
+        src/validation.cpp::GetBlockSubsidy</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/test/audit/consensus_invariants_tests.cpp">
+        src/test/audit/consensus_invariants_tests.cpp</a> (C++ counterpart)</li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/pow.cpp">
+        src/pow.cpp::CalculateNextWorkRequired</a> (C-4 source)</li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/security-audit.html">Phase 11 hub</a>
+  <a class="next" href="/testing/audit-pow-isolation.html">H-1 PoW isolation</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

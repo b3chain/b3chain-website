@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; W-1 Address Rejection</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  <a href="/testing/security-audit.html">Phase 11</a> /
+  W-1 address rejection
+</div>
+
+<header>
+  <h1>W-1 &mdash; Bitcoin Address Rejection</h1>
+  <p class="subtitle">
+    Every b3chain RPC and wallet path must refuse Bitcoin addresses.
+    Otherwise users would lose money the first time someone copy-pastes a
+    Bitcoin address into a b3chain <code>sendtoaddress</code> call.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Script: <b>audit-address-rejection.py</b></span>
+    <span class="pill">Samples: <b>36 real Bitcoin addresses</b></span>
+    <span class="pill">Status: <b><span class="status-pass">8 / 8 PASS</span></b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Address-format table</h2>
+  <table>
+    <thead><tr><th>Format</th><th>Bitcoin example</th><th>b3chain regtest example</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>P2PKH (legacy)</td>
+        <td><code>1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa</code></td>
+        <td>(prefix <code>B</code> on mainnet)</td>
+      </tr>
+      <tr>
+        <td>P2SH</td>
+        <td><code>3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy</code></td>
+        <td>(prefix <code>b</code> on mainnet)</td>
+      </tr>
+      <tr>
+        <td>Bech32 (segwit v0)</td>
+        <td><code>bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4</code></td>
+        <td><code>b3rt1q0kexyq2nsz3sufuw74py0acaa6l4k7ad8ns2mx</code></td>
+      </tr>
+      <tr>
+        <td>Bech32m (taproot)</td>
+        <td><code>bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0</code></td>
+        <td>(prefix <code>b3p</code> mainnet)</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>2. What is being audited</h2>
+  <ul>
+    <li><b>Sanity:</b> A freshly issued b3rt1 regtest address validates
+        as <code>isvalid: true</code>.</li>
+    <li><b>Validation:</b> All 36 Bitcoin sample addresses (15 P2PKH,
+        8 P2SH, 8 Bech32, 5 Bech32m) return
+        <code>isvalid: false</code>.</li>
+    <li><b>Send safety:</b> <code>sendtoaddress</code> raises an error
+        when given a Bitcoin P2PKH, Bech32, and Taproot address.</li>
+    <li><b>Descriptor isolation:</b> Importing a Bitcoin xpub via
+        <code>importdescriptors</code> is either rejected outright or, if
+        accepted, the derived addresses use b3chain prefixes (not
+        <code>bc1</code>).</li>
+  </ul>
+</section>
+
+<section>
+  <h2>3. How to run</h2>
+<pre>cd b3chain
+python3 contrib/testing/audit/audit-address-rejection.py</pre>
+</section>
+
+<section>
+  <h2>4. Expected output</h2>
+<pre>[W-1] Bitcoin address rejection
+========================================================================
+  Testing 36 Bitcoin addresses against b3chain validateaddress...
+  PASS  [W-1] sanity: own b3rt1 address validates true  b3rt1q0kexyq2nsz3sufuw74py0acaa6l4k7ad8ns2mx
+  PASS  [W-1] own address uses b3rt1 prefix  b3rt1q0kexyq2nsz3sufuw74py0acaa6l4k7ad8ns2mx
+  PASS  [W-1] every Bitcoin mainnet address is rejected by validateaddress
+  PASS  [W-1] 36/36 Bitcoin addresses rejected as invalid
+  PASS  [W-1] sendtoaddress to Bitcoin P2PKH raises error  Invalid B3Chain address: ...
+  PASS  [W-1] sendtoaddress to Bitcoin bech32 raises error  Invalid B3Chain address: ...
+  PASS  [W-1] sendtoaddress to Bitcoin taproot raises error  Invalid B3Chain address: ...
+  PASS  [W-1] xpub import raises an error (acceptable behaviour)
+------------------------------------------------------------------------
+  8/8 checks passed in 3.3s
+AUDIT RESULT: PASS  [W-1]</pre>
+</section>
+
+<section>
+  <h2>5. Defence: what if I lose money anyway?</h2>
+  <p>
+    The audit guarantees b3chaind itself rejects Bitcoin addresses. It
+    cannot prevent every kind of address mistake (e.g. malware injecting a
+    different b3chain address into your clipboard). General defences:
+  </p>
+  <ul>
+    <li>Always copy-paste the destination address from the source you
+        trust, then read at least the first 6 and last 4 characters back.</li>
+    <li>For large transfers, send a tiny test amount first.</li>
+    <li>Use a wallet UI that displays the address checksum prominently.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>6. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-address-rejection.py">
+        contrib/testing/audit/audit-address-rejection.py</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/kernel/chainparams.cpp">
+        src/kernel/chainparams.cpp</a> &mdash; address prefixes</li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/key_io.cpp">
+        src/key_io.cpp</a> &mdash; address parsing</li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/audit-network-isolation.html">N-1 network isolation</a>
+  <a class="next" href="/testing/audit-simd-blake3.html">B-1 SIMD BLAKE3</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

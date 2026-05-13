@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; W-2 HD wallet BIP44 coin_type</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  <a href="/testing/security-audit.html">Phase 11</a> /
+  W-2 HD coin_type
+</div>
+
+<header>
+  <h1>W-2 &mdash; HD Wallet BIP44 coin_type</h1>
+  <p class="subtitle">
+    b3chain assigns itself BIP44 coin_type <b>9333</b> on mainnet and
+    <b>1</b> on testnet/regtest (per the BIP44 standard). This audit
+    verifies the assignment is implemented correctly in the wallet code,
+    documented in <code>doc/b3chain-bip44.md</code>, and not leaking
+    between mainnet and test chains.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Script: <b>audit-hd-coin-type.py</b></span>
+    <span class="pill">coin_type: <b>9333</b></span>
+    <span class="pill">Status: <b><span class="status-pass">9 / 9 PASS</span></b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Why a custom coin_type</h2>
+  <p>
+    BIP44's <code>coin_type</code> is the second hardened derivation level
+    in the path <code>m/purpose'/coin_type'/account'/change/index</code>.
+    Each chain gets its own number, registered in
+    <a href="https://github.com/satoshilabs/slips/blob/master/slip-0044.md">SLIP-0044</a>,
+    so a single seed phrase produces different keys on Bitcoin
+    (<code>0</code>), Litecoin (<code>2</code>), Ethereum (<code>60</code>), etc.
+  </p>
+  <p>
+    If b3chain reused Bitcoin's <code>coin_type 0</code>, importing the
+    same BIP39 mnemonic into both wallets would produce identical
+    addresses on both chains &mdash; with all the seed-reuse and accidental
+    cross-chain replay risks that brings.
+  </p>
+</section>
+
+<section>
+  <h2>2. Why 9333</h2>
+  <table>
+    <thead><tr><th>Criterion</th><th>How 9333 fits</th></tr></thead>
+    <tbody>
+      <tr><td>Not currently assigned</td><td>The 9216&ndash;16383 band is unallocated as of writing.</td></tr>
+      <tr><td>Mnemonic</td><td><code>9</code> = first decimal digit not used by Bitcoin (0); <code>333</code> = three "3"s for "B3Chain".</td></tr>
+      <tr><td>Outside common ranges</td><td>Avoids Ethereum (60), Litecoin (2), BCH (145), DOGE (3), Zcash (133).</td></tr>
+      <tr><td>Easy to remember</td><td>4-digit, all-decimal value.</td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    9333 is <b>proposed</b>, not yet registered with SLIP-0044. See the
+    documentation page for the registration plan and rollback strategy.
+  </p>
+</section>
+
+<section>
+  <h2>3. Derivation paths</h2>
+  <table>
+    <thead><tr><th>Address type</th><th>Mainnet path</th><th>Testnet/regtest path</th></tr></thead>
+    <tbody>
+      <tr><td>P2PKH (legacy)</td>     <td><code>m/44'/9333'/0'/0/0</code></td><td><code>m/44'/1'/0'/0/0</code></td></tr>
+      <tr><td>P2SH-segwit</td>        <td><code>m/49'/9333'/0'/0/0</code></td><td><code>m/49'/1'/0'/0/0</code></td></tr>
+      <tr><td>Bech32 (segwit)</td>    <td><code>m/84'/9333'/0'/0/0</code></td><td><code>m/84'/1'/0'/0/0</code></td></tr>
+      <tr><td>Bech32m (Taproot)</td>  <td><code>m/86'/9333'/0'/0/0</code></td><td><code>m/86'/1'/0'/0/0</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>4. What is being audited</h2>
+  <ul>
+    <li><b>Static.</b> <code>src/wallet/walletutil.cpp</code> contains the
+        literal <code>"9333h"</code> exactly once and uses
+        <code>"1h"</code> on test chains, gated by
+        <code>Params().IsTestChain()</code>.</li>
+    <li><b>Static.</b> <code>doc/b3chain-bip44.md</code> exists and
+        documents both <code>9333</code> and the SLIP-0044 plan.</li>
+    <li><b>Functional.</b> On regtest, a freshly-issued bech32 address
+        has <code>hdkeypath</code> starting with <code>m/84h/1h/0h/</code>
+        and the descriptor list contains <code>/1h/</code> but not
+        <code>/9333h/</code>.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>5. How to run</h2>
+<pre>cd b3chain
+python3 contrib/testing/audit/audit-hd-coin-type.py</pre>
+</section>
+
+<section>
+  <h2>6. Expected output</h2>
+<pre>[W-2] HD wallet BIP44 coin_type
+========================================================================
+  PASS  [W-2] walletutil.cpp uses coin_type 9333h on mainnet
+  PASS  [W-2] walletutil.cpp uses coin_type 1h on test chains
+  PASS  [W-2] gate is IsTestChain() (testnet/regtest detection)
+  PASS  [W-2] '9333h' literal appears exactly once in walletutil.cpp
+  PASS  [W-2] doc/b3chain-bip44.md mentions coin_type 9333
+  PASS  [W-2] doc/b3chain-bip44.md references SLIP-0044
+
+  Spawning regtest node and verifying default descriptor uses /1h/...
+  PASS  [W-2] regtest hdkeypath uses coin_type 1h  hdkeypath=m/84h/1h/0h/0/0
+  PASS  [W-2] at least one regtest descriptor contains /1h/
+  PASS  [W-2] no regtest descriptor contains /9333h/ (mainnet-only)
+------------------------------------------------------------------------
+  9/9 checks passed in 1.2s
+AUDIT RESULT: PASS  [W-2]</pre>
+</section>
+
+<section>
+  <h2>7. Independent verification (third-party tooling)</h2>
+  <p>
+    Take the BIP39 seed your b3chain wallet was created from, derive
+    <code>m/84'/9333'/0'/0/0</code> with any reference BIP32 / BIP44
+    library, and verify the resulting public key matches the address the
+    wallet returned.
+  </p>
+<pre># Python with bip_utils
+from bip_utils import Bip39SeedGenerator, Bip44, Bip44Coins
+
+mnemonic = "your twelve or twenty four words ..."
+seed = Bip39SeedGenerator(mnemonic).Generate()
+
+# bip_utils does not yet know about 9333; pass it explicitly:
+from bip_utils import Bip44Conf, Bip44Coins, Bip44
+# (a fully worked example will be added once bip_utils ships a config.)
+</pre>
+  <p>
+    A short standalone Python verifier is on the roadmap; today the audit
+    script verifies internal consistency, and the static checks confirm
+    the constant.
+  </p>
+</section>
+
+<section>
+  <h2>8. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-hd-coin-type.py">
+        contrib/testing/audit/audit-hd-coin-type.py</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/wallet/walletutil.cpp">
+        src/wallet/walletutil.cpp::GenerateWalletDescriptor</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/b3chain-bip44.md">
+        doc/b3chain-bip44.md</a> &mdash; full rationale and migration plan</li>
+    <li><a href="https://github.com/satoshilabs/slips/blob/master/slip-0044.md">
+        SLIP-0044 master list</a></li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/audit-rebranding.html">B-2 rebranding regression</a>
+  <a class="next" href="/testing/51-attack.html">A-1 51% attack</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

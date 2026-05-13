@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; B-1 SIMD BLAKE3 Differential</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  <a href="/testing/security-audit.html">Phase 11</a> /
+  B-1 SIMD BLAKE3
+</div>
+
+<header>
+  <h1>B-1 &mdash; SIMD BLAKE3 Differential Test</h1>
+  <p class="subtitle">
+    The BLAKE3 C library auto-selects the fastest available SIMD code path
+    at runtime (SSE2, SSE4.1, AVX2, AVX-512 on x86_64; NEON on ARM). A
+    subtle SIMD bug could give wrong hashes on some CPUs and silently fork
+    the network. This audit cross-checks SIMD output against a portable
+    reference for thousands of inputs.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Script: <b>audit-simd-blake3.py</b></span>
+    <span class="pill">Inputs: <b>37 edge sizes + 1000 fuzz</b></span>
+    <span class="pill">Status: <b><span class="status-pass">4 / 4 PASS</span></b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. The differential approach</h2>
+  <p>
+    Instead of trying to test every CPU feature combination directly (an
+    intractable matrix), the audit treats two implementations as oracles
+    of one another:
+  </p>
+  <div class="diagram">
+<pre>     same input bytes
+        |        |
+     SIMD       portable Python reference
+        |        |
+       hash A   hash B
+        |        |
+        +-- == --+
+            ^
+        if not equal, FAIL (with size + first 16 bytes of diff)</pre>
+  </div>
+  <p>
+    The portable reference is a direct port of the BLAKE3 paper's
+    pseudocode. It is intentionally slow (no batching, no SIMD) and is
+    used purely as a correctness oracle.
+  </p>
+</section>
+
+<section>
+  <h2>2. Input sizes tested</h2>
+  <table>
+    <thead><tr><th>Bucket</th><th>Sizes</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Edge sizes</td>
+        <td><code>0, 1, 31, 32, 33, 63, 64, 65, 80, 127, 128, 129, 255, 256, 257, 511, 512, 513, 1023, 1024, 1025, 2047, 2048, 2049, 4095, 4096, 4097, 8191, 8192, 8193, 16383, 16384, 16385, 65535, 65536, 65537, 100000</code></td>
+        <td>Catch bugs at chunk / block / lane boundaries (BLAKE3 chunk = 1024, block = 64).</td>
+      </tr>
+      <tr>
+        <td>Random fuzz</td>
+        <td>1 000 inputs, sizes uniform in <code>[0, 100 000]</code></td>
+        <td>Catch bugs that don't sit on neat boundaries; deterministic seed for reproducibility.</td>
+      </tr>
+      <tr>
+        <td>Spec sanity</td>
+        <td>BLAKE3("") = <code>af1349b9...</code></td>
+        <td>Anchor against the spec constant.</td>
+      </tr>
+      <tr>
+        <td>Determinism</td>
+        <td>Re-hash the same input twice</td>
+        <td>Catches non-deterministic SIMD intrinsics (rare but real).</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>3. How to run</h2>
+<pre>cd b3chain
+pip3 install blake3
+python3 contrib/testing/audit/audit-simd-blake3.py</pre>
+  <p>
+    Runtime is dominated by the pure-Python reference; about 40 seconds on
+    a modern laptop.
+  </p>
+</section>
+
+<section>
+  <h2>4. Expected output</h2>
+<pre>[B-1] SIMD BLAKE3 vs portable-C reference (differential test)
+========================================================================
+  PASS  [B-1] BLAKE3 of empty input matches the spec constant
+  PASS  [B-1] 37 edge sizes match between SIMD and portable reference
+  Running 1000 random fuzz inputs (seed=0xb3c0010d)...
+    200/1000
+    400/1000
+    600/1000
+    800/1000
+    1000/1000
+  PASS  [B-1] 1000 random fuzz inputs match between SIMD and portable reference
+  PASS  [B-1] SIMD library is deterministic across repeated calls
+------------------------------------------------------------------------
+  4/4 checks passed in 38.8s
+AUDIT RESULT: PASS  [B-1]</pre>
+</section>
+
+<section>
+  <h2>5. Limitations</h2>
+  <ul>
+    <li>The audit runs on whichever CPU you use. To cover SSE2, SSE4.1,
+        AVX2, AVX-512, and NEON we will eventually wire it into a CI
+        matrix. Today it tests the implementation that the BLAKE3 library
+        picked for the host CPU.</li>
+    <li>It does not test the C build flags themselves (e.g. <code>-mavx2</code>).
+        For reproducible-build verification, see the upcoming reproducible
+        build documentation.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>6. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-simd-blake3.py">
+        contrib/testing/audit/audit-simd-blake3.py</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/tree/b3chain-main/src/crypto/blake3">
+        src/crypto/blake3/</a> &mdash; BLAKE3 reference + SIMD code</li>
+    <li><a href="https://github.com/BLAKE3-team/BLAKE3-specs">
+        BLAKE3-team/BLAKE3-specs</a> &mdash; the upstream spec</li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/audit-address-rejection.html">W-1 address rejection</a>
+  <a class="next" href="/testing/audit-rebranding.html">B-2 rebranding regression</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

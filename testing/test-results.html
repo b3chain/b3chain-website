@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; Current Test Results</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  Current Test Results
+</div>
+
+<header>
+  <h1>Current Test Results</h1>
+  <p class="subtitle">
+    Snapshot of the most recent test runs. Re-run any of these on your own
+    machine and you should see the same numbers.
+  </p>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Reproducible test suites</h2>
+  <table>
+    <thead>
+      <tr><th>Suite</th><th>Passed</th><th>Failed</th><th>Skipped</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>C++ unit tests (<code>ctest</code>)</td>
+        <td><span class="status-pass">148</span></td>
+        <td><span class="status-pass">0</span></td>
+        <td>1</td>
+      </tr>
+      <tr>
+        <td>Python functional tests (<code>test_runner.py</code>)</td>
+        <td><span class="status-pass">258</span></td>
+        <td><span class="status-pass">0</span></td>
+        <td>19</td>
+      </tr>
+      <tr>
+        <td>Regtest simulation (<code>regtest-simulation.sh</code>)</td>
+        <td><span class="status-pass">19</span></td>
+        <td><span class="status-pass">0</span></td>
+        <td>0</td>
+      </tr>
+      <tr>
+        <td>BLAKE3 PoW verifier (<code>verify-blake3-pow.py</code>)</td>
+        <td><span class="status-pass">9</span></td>
+        <td><span class="status-pass">0</span></td>
+        <td>0</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>2. Phase 11 self-audit</h2>
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Audit</th><th>Result</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>C-1..C-4</td><td>Supply cap &amp; halving</td><td><span class="badge badge-pass">PASS</span></td><td>9 / 9 checks</td></tr>
+      <tr><td>H-1</td><td>PoW / block-ID isolation</td><td><span class="badge badge-pass">PASS</span></td><td>7 / 7 checks</td></tr>
+      <tr><td>N-1</td><td>Network isolation</td><td><span class="badge badge-pass">PASS</span></td><td>15 / 15 checks</td></tr>
+      <tr><td>W-1</td><td>Bitcoin address rejection</td><td><span class="badge badge-pass">PASS</span></td><td>8 / 8 checks (36 addresses)</td></tr>
+      <tr><td>B-1</td><td>SIMD BLAKE3 differential</td><td><span class="badge badge-pass">PASS</span></td><td>4 / 4 checks (1 037 inputs)</td></tr>
+      <tr><td>B-2</td><td>Rebranding regression</td><td><span class="badge badge-pass">PASS</span></td><td>6 / 6 checks (after fixes)</td></tr>
+      <tr><td>W-2</td><td>HD wallet coin_type 9333</td><td><span class="badge badge-pass">PASS</span></td><td>9 / 9 checks</td></tr>
+      <tr><td>A-1</td><td>51% double-spend simulation</td><td><span class="badge badge-pass">DEMO</span></td><td>4 / 4 checks (regtest)</td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Detailed results in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/SECURITY-AUDIT.md">
+    <code>doc/SECURITY-AUDIT.md</code></a>.
+  </p>
+</section>
+
+<section>
+  <h2>3. Performance markers</h2>
+  <div class="kvs">
+    <div>BLAKE3 single-thread</div><div>~1.4 MH/s on a modern CPU (single-thread, no SIMD batching)</div>
+    <div>Mining 2 016 blocks</div><div>~70 s on regtest (3 nodes, single CPU)</div>
+    <div>Audit run-all</div><div>~90 s (excluding ctest reruns)</div>
+  </div>
+</section>
+
+<section>
+  <h2>4. Reproduce</h2>
+<pre># Build
+cd b3chain &amp;&amp; mkdir -p build &amp;&amp; cd build &amp;&amp; cmake .. &amp;&amp; cmake --build . -j$(nproc)
+
+# Reproducible suites
+ctest --output-on-failure
+python3 ../test/functional/test_runner.py
+bash ../contrib/testing/regtest-simulation.sh
+python3 ../contrib/testing/verify-blake3-pow.py
+
+# Phase 11 audit
+bash ../contrib/testing/audit/run-all.sh</pre>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/regtest-simulation.html">Regtest simulation</a>
+  <a class="next" href="/testing/limitations.html">Known limitations</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

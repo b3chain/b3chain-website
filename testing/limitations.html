@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; Known Limitations</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  Known Limitations
+</div>
+
+<header>
+  <h1>Known Limitations</h1>
+  <p class="subtitle">
+    Things this test corpus deliberately does <em>not</em> cover, and what
+    an external auditor or downstream integrator should still look at.
+    Honesty about scope is more useful than a long list of green ticks.
+  </p>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Scope of the published tests</h2>
+  <p>
+    The Phase 11 self-audit and the reproducible suites listed on this site
+    cover the b3chain-specific changes on top of Bitcoin Core 30.2.0:
+    BLAKE3 PoW, address prefixes, magic bytes, supply schedule, HD wallet
+    coin_type, and the rebranding regression. They do <b>not</b> re-audit
+    the upstream Bitcoin Core 30.2.0 code &mdash; that work was done by
+    the Bitcoin Core developers and reviewers over many years.
+  </p>
+</section>
+
+<section>
+  <h2>2. What is not covered</h2>
+  <ul>
+    <li>
+      <b>External audit.</b> No third-party security firm has reviewed
+      b3chain. We will commission one before any mainnet launch is
+      announced. The self-audit is a precondition, not a substitute.
+    </li>
+    <li>
+      <b>Mainnet-only behaviour.</b> The functional checks in the audit run
+      on regtest. The static / source checks confirm that the mainnet code
+      paths are correct (e.g. coin_type 9333), but live mainnet behaviour
+      is not exercised &mdash; because there is no mainnet yet.
+    </li>
+    <li>
+      <b>P2P fuzzing depth.</b> The network-isolation audit verifies that
+      Bitcoin magic bytes are rejected. A more aggressive fuzzer
+      (libfuzzer, AFL, AFL++) on the wire-protocol parser is on the
+      roadmap but not run yet.
+    </li>
+    <li>
+      <b>SIMD coverage.</b> The differential test compares the
+      BLAKE3 SIMD implementation against a portable Python reference
+      across edge sizes and 1 000 fuzz inputs. It does not exhaustively
+      test every CPU feature combination on every architecture; that
+      requires a CI matrix we have not yet built.
+    </li>
+    <li>
+      <b>Hardware-wallet integration.</b> The HD wallet coin_type 9333 is
+      proposed but not yet registered with SLIP-0044. Hardware wallets
+      will not recognise b3chain until the registration is accepted (or a
+      manual derivation path is entered).
+    </li>
+    <li>
+      <b>Long-running mainnet attacks.</b> Selfish-mining, eclipse, and
+      sustained 51% attacks need a real network to be meaningful. The
+      regtest 51% demo only proves the consensus logic accepts the longer
+      chain &mdash; it does not characterise the cost of attacking the
+      live network.
+    </li>
+    <li>
+      <b>Wallet UI.</b> The Qt GUI was rebranded; there is no formal UX
+      audit, accessibility review, or translation completeness check.
+    </li>
+  </ul>
+</section>
+
+<section>
+  <h2>3. What an external auditor should look at first</h2>
+  <ol>
+    <li>The diff against upstream Bitcoin Core (focus area: anything that
+        modifies <code>src/primitives/block.{cpp,h}</code>,
+        <code>src/pow.{cpp,h}</code>, <code>src/kernel/chainparams.cpp</code>,
+        and <code>src/wallet/walletutil.cpp</code>).</li>
+    <li>The dual-hash architecture: are there any code paths that should
+        use <code>GetPoWHash()</code> but use <code>GetHash()</code> (or
+        vice versa)? See
+        <a href="/testing/audit-pow-isolation.html">H-1</a>.</li>
+    <li>The early-difficulty-guard logic in
+        <code>src/pow.cpp::GetNextWorkRequired</code>. Static-analysis
+        only catches the obvious mistakes.</li>
+    <li>The genesis block: are the published constants
+        (<code>0xb32521b577317c19...</code>) reproducible from the
+        published mining tools?</li>
+  </ol>
+</section>
+
+<section>
+  <h2>4. Reporting gaps</h2>
+  <p>
+    If you find an attack vector or a bug not covered here, please follow
+    the disclosure procedure on the
+    <a href="/testing/reporting.html">reporting page</a>.
+  </p>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/test-results.html">Current test results</a>
+  <a class="next" href="/testing/reporting.html">Reporting issues</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

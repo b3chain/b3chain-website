@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; PoW Reference Verifier</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  PoW Reference Verifier
+</div>
+
+<header>
+  <h1>PoW Reference Verifier</h1>
+  <p class="subtitle">
+    A standalone Python script that verifies the double BLAKE3-256 PoW
+    algorithm against published test vectors. Requires no running node and
+    no build &mdash; just Python and the official <code>blake3</code>
+    binding.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Script: <b>verify-blake3-pow.py</b></span>
+    <span class="pill">Runtime: <b>~1 second</b></span>
+    <span class="pill">Status: <b><span class="status-pass">PASS</span></b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Overview</h2>
+  <p>
+    Block <i>identity</i> hashes (block hash, txid, merkle tree) on b3chain
+    still use double SHA-256, identical to Bitcoin Core. The
+    <b>proof-of-work hash</b> is the only consensus-critical hash that
+    differs &mdash; it is double BLAKE3-256:
+  </p>
+
+<pre>PoW_hash = BLAKE3( BLAKE3( serialize(block_header) ) )
+
+where the 80-byte header serialisation is:
+  nVersion       (4 bytes, int32, little-endian)
+  hashPrevBlock  (32 bytes, uint256, little-endian)
+  hashMerkleRoot (32 bytes, uint256, little-endian)
+  nTime          (4 bytes, uint32, little-endian)
+  nBits          (4 bytes, uint32, little-endian)
+  nNonce         (4 bytes, uint32, little-endian)</pre>
+
+  <p>
+    The verifier checks this exact construction against published BLAKE3
+    test vectors and against four pre-computed b3chain block-header
+    vectors.
+  </p>
+</section>
+
+<section>
+  <h2>2. Prerequisites</h2>
+  <div class="kvs">
+    <div>OS</div><div>Linux, macOS, or WSL2</div>
+    <div>Python</div><div>3.10+</div>
+    <div>Dependency</div><div><code>pip3 install blake3</code></div>
+  </div>
+</section>
+
+<section>
+  <h2>3. Run it</h2>
+<pre>git clone https://github.com/b3chain/b3chain.git
+cd b3chain
+pip3 install blake3
+python3 contrib/testing/verify-blake3-pow.py</pre>
+</section>
+
+<section>
+  <h2>4. Expected output</h2>
+<pre>BLAKE3 single-hash test vectors:
+  PASS  empty input
+  PASS  "abc"
+  PASS  64-byte chunk boundary
+
+Double BLAKE3-256 vectors:
+  PASS  empty input
+  PASS  "Bitcoin"
+
+Block-header PoW vectors:
+  PASS  height 0 genesis
+  PASS  height 1
+  PASS  height 100
+  PASS  height 1000
+
+Verifier: ALL PASS</pre>
+</section>
+
+<section>
+  <h2>5. With a live node (optional)</h2>
+<pre>python3 contrib/testing/verify-blake3-pow.py --rpc-port=18545</pre>
+  <p>
+    Connects to a running b3chain regtest / testnet node, fetches the most
+    recent N blocks, recomputes the PoW hash for each header in pure
+    Python, and compares against the value the node reports.
+  </p>
+</section>
+
+<section>
+  <h2>6. Common pitfalls</h2>
+  <ul>
+    <li>Using <code>hashlib.blake2b</code> by mistake &mdash; b3chain uses
+        <b>BLAKE3</b>, a different (faster, parallel) algorithm. The
+        <code>blake3</code> Python package is the official binding.</li>
+    <li>Forgetting little-endian byte order for header fields. The
+        verifier prints the bytes it serialised so you can diff them
+        against your own.</li>
+    <li>Using single BLAKE3 instead of double. The script tests both, so
+        the failure mode is loud.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>7. Source links</h2>
+  <ul>
+    <li>Verifier:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/verify-blake3-pow.py">
+        contrib/testing/verify-blake3-pow.py</a></li>
+    <li>C++ implementation:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/primitives/block.cpp">
+        src/primitives/block.cpp::CBlockHeader::GetPoWHash</a></li>
+    <li>BLAKE3 spec:
+      <a href="https://github.com/BLAKE3-team/BLAKE3-specs">BLAKE3 specs repository</a></li>
+    <li>PoW design notes:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/b3chain-pow-design.md">
+        doc/b3chain-pow-design.md</a></li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing.html">Testing hub</a>
+  <a class="next" href="/testing/test-vectors.html">BLAKE3 test vectors</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

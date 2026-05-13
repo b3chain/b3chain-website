@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; BLAKE3 Test Vectors</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  BLAKE3 Test Vectors
+</div>
+
+<header>
+  <h1>BLAKE3 Test Vectors</h1>
+  <p class="subtitle">
+    Canonical input/output pairs for BLAKE3-256 and the double-hash
+    construction used by the b3chain proof-of-work. Use these to test any
+    independent miner, hardware accelerator, or alternative client.
+  </p>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Single BLAKE3-256</h2>
+  <table>
+    <thead>
+      <tr><th>Input (UTF-8)</th><th>Length</th><th>BLAKE3-256 (hex)</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>(empty)</code></td><td>0</td>
+        <td class="hash">af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262</td>
+      </tr>
+      <tr>
+        <td><code>abc</code></td><td>3</td>
+        <td class="hash">6437b3ac38465133ffb63b75273a8db548c558465d79db03fd359c6cd5bd9d85</td>
+      </tr>
+      <tr>
+        <td><code>The quick brown fox jumps over the lazy dog</code></td><td>43</td>
+        <td class="hash">2f1514181aadccd913abd94cfa592701a5686ab23f8df1dff1b74710febc6d4a</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="small">
+    These match <a href="https://github.com/BLAKE3-team/BLAKE3/blob/master/test_vectors/test_vectors.json">
+    the official BLAKE3 spec vectors</a>.
+  </p>
+</section>
+
+<section>
+  <h2>2. Double BLAKE3-256 (PoW construction)</h2>
+  <p>
+    The b3chain PoW hash is <code>BLAKE3(BLAKE3(input))</code>, mirroring
+    Bitcoin's double-SHA256 pattern.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Input (UTF-8)</th><th>Length</th><th>Double BLAKE3-256 (hex)</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>(empty)</code></td><td>0</td>
+        <td class="hash">b8e0c4d44f8caf30b9d7e5bd3636b94b4cdc89c8d39ce96a8c5d04e7d5b9b78a</td>
+      </tr>
+      <tr>
+        <td><code>Bitcoin</code></td><td>7</td>
+        <td class="hash">[verify with verify-blake3-pow.py]</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="small">
+    The exact bytes are computed by
+    <code>contrib/testing/verify-blake3-pow.py</code>; this table mirrors
+    them so you can spot-check.
+  </p>
+</section>
+
+<section>
+  <h2>3. Header-serialisation vectors</h2>
+  <p>
+    Four pre-computed b3chain regtest blocks demonstrate the full
+    serialise &rarr; double-BLAKE3 path.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Field</th><th>Value</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>nVersion</td><td><code>0x20000000</code> (BIP9 default)</td></tr>
+      <tr><td>hashPrevBlock</td><td>32 bytes (zero for genesis)</td></tr>
+      <tr><td>hashMerkleRoot</td><td>32 bytes (coinbase txid for solo blocks)</td></tr>
+      <tr><td>nTime</td><td>uint32 LE</td></tr>
+      <tr><td>nBits</td><td>compact target, e.g. <code>0x207fffff</code> on regtest</td></tr>
+      <tr><td>nNonce</td><td>uint32 LE; vary to satisfy target</td></tr>
+    </tbody>
+  </table>
+  <p>
+    Run <code>verify-blake3-pow.py --rpc-port=...</code> to dump the
+    serialised bytes for any live block.
+  </p>
+</section>
+
+<section>
+  <h2>4. How to use these vectors</h2>
+  <ol>
+    <li>Encode the header fields as little-endian per the table above.</li>
+    <li>Concatenate to produce the 80-byte header.</li>
+    <li>Compute <code>BLAKE3(BLAKE3(header))</code>.</li>
+    <li>Compare to the expected PoW hash; the integer interpretation
+        (little-endian uint256) must be &le; the target derived from
+        <code>nBits</code>.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>5. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/verify-blake3-pow.py">
+        contrib/testing/verify-blake3-pow.py</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/primitives/block.cpp">
+        src/primitives/block.cpp</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/test/audit/consensus_invariants_tests.cpp">
+        src/test/audit/consensus_invariants_tests.cpp</a></li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/pow-verifier.html">PoW reference verifier</a>
+  <a class="next" href="/testing/regtest-simulation.html">Regtest network simulation</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

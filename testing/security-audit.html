@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; Phase 11 Security Audit</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  Phase 11 Security Audit
+</div>
+
+<header>
+  <h1>Phase 11 Security Audit (master checklist)</h1>
+  <p class="subtitle">
+    A structured self-audit of every b3chain-specific change on top of
+    Bitcoin Core 30.2.0. Every row is backed by an automated script in
+    <code>contrib/testing/audit/</code> and a detail page on this site.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Status: <b><span class="status-pass">all PASS</span></b></span>
+    <span class="pill">Items: <b>11</b></span>
+    <span class="pill">Source: <b>doc/SECURITY-AUDIT.md</b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Summary</h2>
+  <table>
+    <thead>
+      <tr><th>Category</th><th>Items</th><th>Passed</th><th>Failed</th><th>Pending</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Consensus invariants</td><td>4</td><td><span class="status-pass">4</span></td><td>0</td><td>0</td></tr>
+      <tr><td>Hash function isolation</td><td>1</td><td><span class="status-pass">1</span></td><td>0</td><td>0</td></tr>
+      <tr><td>Network isolation</td><td>1</td><td><span class="status-pass">1</span></td><td>0</td><td>0</td></tr>
+      <tr><td>Wallet &amp; address safety</td><td>2</td><td><span class="status-pass">2</span></td><td>0</td><td>0</td></tr>
+      <tr><td>Build / regression</td><td>2</td><td><span class="status-pass">2</span></td><td>0</td><td>0</td></tr>
+      <tr><td>Attack simulation</td><td>1</td><td><span class="status-pass">1</span></td><td>0</td><td>0</td></tr>
+      <tr><td><b>Total</b></td><td><b>11</b></td><td><b><span class="status-pass">11</span></b></td><td><b>0</b></td><td><b>0</b></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>2. Checklist</h2>
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Item</th><th>Script</th><th>Status</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>C-1</td><td>Block subsidy halves at every 210 000 blocks</td><td><code>audit-supply-cap.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-supply-cap.html">page</a></td></tr>
+      <tr><td>C-2</td><td>Total supply caps at 20 999 999.97690000 B3C</td><td><code>audit-supply-cap.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-supply-cap.html">page</a></td></tr>
+      <tr><td>C-3</td><td>Subsidy returns 0 after halving 64</td><td><code>audit-supply-cap.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-supply-cap.html">page</a></td></tr>
+      <tr><td>C-4</td><td>Difficulty retarget enforces 4&times; bounds</td><td><code>audit-supply-cap.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-supply-cap.html">page</a></td></tr>
+      <tr><td>H-1</td><td>PoW / Block-ID hash isolation</td><td><code>audit-pow-isolation.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-pow-isolation.html">page</a></td></tr>
+      <tr><td>N-1</td><td>Bitcoin magic / DNS seed isolation</td><td><code>audit-network-isolation.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-network-isolation.html">page</a></td></tr>
+      <tr><td>W-1</td><td>Bitcoin address rejection (36 samples)</td><td><code>audit-address-rejection.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-address-rejection.html">page</a></td></tr>
+      <tr><td>W-2</td><td>HD wallet BIP44 coin_type 9333</td><td><code>audit-hd-coin-type.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-hd-coin-type.html">page</a></td></tr>
+      <tr><td>B-1</td><td>SIMD vs portable C BLAKE3 differential</td><td><code>audit-simd-blake3.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-simd-blake3.html">page</a></td></tr>
+      <tr><td>B-2</td><td>Rebranding regression scan</td><td><code>audit-rebranding.sh</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-rebranding.html">page</a></td></tr>
+      <tr><td>A-1</td><td>51% attack live regtest demo</td><td><code>audit-51-attack-sim.py</code></td><td><span class="badge badge-pass">DEMO</span></td><td><a href="/testing/51-attack.html">page</a></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>3. Run the whole suite</h2>
+<pre>cd b3chain
+bash contrib/testing/audit/run-all.sh</pre>
+  <p>
+    Every audit script prints
+    <code>AUDIT RESULT: PASS</code> or <code>AUDIT RESULT: FAIL</code> on
+    its final line. The wrapper exits with the worst status it observed.
+  </p>
+</section>
+
+<section>
+  <h2>4. Findings &amp; remediation (first run)</h2>
+  <p>
+    The first end-to-end run caught real regressions left over from the
+    rebranding pass. They were fixed in the same commit set as the audit
+    framework. Full table in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/SECURITY-AUDIT.md#findings-and-remediation-phase-11-first-run">
+    <code>doc/SECURITY-AUDIT.md</code></a>.
+  </p>
+  <ul>
+    <li>5 leftover Qt <code>tr()</code> strings still said "Bitcoin"
+        instead of "B3Chain" &mdash; fixed.</li>
+    <li>One RPC error message in
+        <code>src/rpc/rawtransaction_util.cpp</code> still said
+        "Invalid Bitcoin address" &mdash; fixed.</li>
+    <li><code>doc/Doxyfile.in</code> still set <code>PROJECT_NAME = "Bitcoin Core"</code>
+        &mdash; fixed.</li>
+    <li>~30 references to <code>bitcoind</code> / <code>bitcoin-cli</code>
+        in <code>contrib/*/README.md</code> &mdash; bulk-renamed.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>5. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/SECURITY-AUDIT.md">
+        <code>doc/SECURITY-AUDIT.md</code></a> &mdash; master checklist</li>
+    <li><a href="https://github.com/b3chain/b3chain/tree/b3chain-main/contrib/testing/audit">
+        <code>contrib/testing/audit/</code></a> &mdash; audit scripts</li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/test/audit/consensus_invariants_tests.cpp">
+        <code>src/test/audit/consensus_invariants_tests.cpp</code></a>
+        &mdash; C++ counterpart</li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/reporting.html">Reporting issues</a>
+  <a class="next" href="/testing/audit-supply-cap.html">C-1..C-4 supply cap</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

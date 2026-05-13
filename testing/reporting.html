@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; Reporting Issues</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  Reporting Issues
+</div>
+
+<header>
+  <h1>Reporting Issues</h1>
+  <p class="subtitle">
+    How to file a bug, how to disclose a security finding privately, and
+    what to expect in response. We treat security reports seriously, but
+    please read this page first.
+  </p>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Bugs (non-security)</h2>
+  <p>
+    Open a GitHub issue on
+    <a href="https://github.com/b3chain/b3chain/issues">github.com/b3chain/b3chain/issues</a>.
+    Useful information:
+  </p>
+  <ul>
+    <li>b3chain commit hash (<code>git rev-parse HEAD</code>)</li>
+    <li>OS and version (<code>uname -a</code>)</li>
+    <li>Build flags / cmake options used</li>
+    <li>Steps to reproduce, including any audit-script command line</li>
+    <li>Full <code>debug.log</code> from the affected node, or the audit
+        script's complete output</li>
+  </ul>
+</section>
+
+<section>
+  <h2>2. Security disclosures</h2>
+  <p>
+    Email <a href="mailto:security@b3chain.org">security@b3chain.org</a>.
+    Do <b>not</b> file a public issue for any of the following classes of
+    bug:
+  </p>
+  <ul>
+    <li>Consensus-affecting bugs (anything that could split the chain
+        between honest nodes)</li>
+    <li>Resource-exhaustion or remote-crash bugs in the P2P stack</li>
+    <li>Wallet bugs that could leak keys or sign unintended outputs</li>
+    <li>RPC bugs that bypass authentication or expose private data</li>
+    <li>Any cryptographic weakness in the BLAKE3 PoW or our use of it</li>
+  </ul>
+  <p>
+    Encrypt with our PGP key if you handle the report at the OS level
+    (key fingerprint published on the security page once available).
+  </p>
+</section>
+
+<section>
+  <h2>3. What to expect</h2>
+  <ul>
+    <li><b>Acknowledgement</b> within 72 hours from a human, not a bot.</li>
+    <li><b>Triage decision</b> within 7 days: accept, request more info, or
+        decline (with reason).</li>
+    <li><b>Fix timeline</b> for accepted reports: best-effort; consensus
+        bugs are top priority and usually patched within days.</li>
+    <li><b>Coordinated disclosure</b>. We aim to publish a fix and a
+        public CVE-style advisory within 90 days of acknowledgement, with
+        the reporter credited (unless anonymity is requested).</li>
+  </ul>
+</section>
+
+<section>
+  <h2>4. Bounty</h2>
+  <p>
+    There is no formal bounty programme yet. We will publicly acknowledge
+    every reporter who follows the disclosure rules above and (eventually)
+    pay bounties scaled to severity once a treasury exists. Do not expect
+    a payout today; do expect credit and respect.
+  </p>
+</section>
+
+<section>
+  <h2>5. Out of scope</h2>
+  <ul>
+    <li>Phishing &mdash; we cannot stop people building lookalike sites.
+        See the
+        <a href="/index.html#identity">identity &amp; impersonation</a>
+        section.</li>
+    <li>Pre-launch token claims &mdash; there is no token, full stop.
+        Anyone selling B3C is selling nothing.</li>
+    <li>Bugs in upstream Bitcoin Core that we have not modified &mdash;
+        please report those directly to the Bitcoin Core security
+        process.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>6. Contact summary</h2>
+  <div class="kvs">
+    <div>Bugs</div><div><a href="https://github.com/b3chain/b3chain/issues">GitHub Issues</a></div>
+    <div>Security</div><div><a href="mailto:security@b3chain.org">security@b3chain.org</a></div>
+    <div>Acknowledgement window</div><div>72 hours</div>
+    <div>Disclosure window</div><div>90 days (negotiable)</div>
+  </div>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/limitations.html">Known limitations</a>
+  <a class="next" href="/testing/security-audit.html">Phase 11 security audit</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

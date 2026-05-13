@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; B-2 Rebranding Regression Audit</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  <a href="/testing/security-audit.html">Phase 11</a> /
+  B-2 rebranding regression
+</div>
+
+<header>
+  <h1>B-2 &mdash; Rebranding Regression Audit</h1>
+  <p class="subtitle">
+    Greps the codebase for forbidden Bitcoin-branded patterns in
+    user-visible code (excluding upstream attribution, copyright, protocol
+    constants, and the test corpus). Optionally re-runs the unit and
+    functional tests to confirm zero behavioural regressions.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Script: <b>audit-rebranding.sh</b></span>
+    <span class="pill">Runtime: <b>~2 min (grep only)</b></span>
+    <span class="pill">Status: <b><span class="status-pass">6 / 6 PASS</span></b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Forbidden-pattern table</h2>
+  <table>
+    <thead><tr><th>Pattern</th><th>Where it must NOT appear</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>"Bitcoin Signed Message"</code></td>
+        <td>Anywhere outside <code>src/test/</code></td>
+        <td>Replaced with <code>"B3Chain Signed Message"</code> for chain-specific signing</td>
+      </tr>
+      <tr>
+        <td><code>"bitcoin:"</code> URI scheme literals</td>
+        <td>Source code (was: BIP21 URI scheme literal)</td>
+        <td>Replaced with <code>"b3chain:"</code></td>
+      </tr>
+      <tr>
+        <td><code>bitcoind</code> / <code>bitcoin-cli</code> / <code>bitcoin-qt</code> ...</td>
+        <td>Markdown docs (excluding release-notes &amp; lines that compare old/new)</td>
+        <td>User-visible binary names</td>
+      </tr>
+      <tr>
+        <td><code>HelpExampleCli/Rpc("...bitcoin..."</code></td>
+        <td>RPC help strings</td>
+        <td>Visible in <code>help</code> output</td>
+      </tr>
+      <tr>
+        <td><code>tr("...Bitcoin...")</code></td>
+        <td>Qt translatable strings</td>
+        <td>Visible in the GUI</td>
+      </tr>
+      <tr>
+        <td><code>"Bitcoin Core"</code></td>
+        <td>Outside copyright / attribution lines</td>
+        <td>The product name is now "B3Chain Core"</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Whitelisted (intentionally not flagged): copyright lines, "The Bitcoin
+    Core developers" attribution, source filenames like
+    <code>src/bitcoin-util.cpp</code>, external URLs, and lines that
+    contrast the old and new names side by side.
+  </p>
+</section>
+
+<section>
+  <h2>2. Findings from the first run</h2>
+  <p>
+    The audit caught real regressions. They were fixed in the same commit
+    set as the audit framework:
+  </p>
+  <ul>
+    <li>5 leftover Qt <code>tr()</code> strings in
+        <code>src/qt/intro.cpp</code>, <code>guiutil.cpp</code>,
+        <code>sendcoinsdialog.cpp</code>, <code>addressbookpage.cpp</code>
+        still said "Bitcoin" &rarr; replaced with "B3Chain".</li>
+    <li><code>src/rpc/rawtransaction_util.cpp</code> raised
+        <code>"Invalid Bitcoin address: ..."</code> &rarr; replaced.</li>
+    <li><code>doc/Doxyfile.in</code> set
+        <code>PROJECT_NAME = "Bitcoin Core"</code> &rarr; replaced.</li>
+    <li>30+ <code>bitcoind</code> / <code>bitcoin-cli</code> references in
+        <code>contrib/*/README.md</code> &rarr; bulk-renamed.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>3. How to run</h2>
+<pre>cd b3chain
+bash contrib/testing/audit/audit-rebranding.sh
+
+# Also re-run the test suites (slower, ~30 min on a laptop)
+RERUN_TESTS=1 bash contrib/testing/audit/audit-rebranding.sh</pre>
+</section>
+
+<section>
+  <h2>4. Expected output</h2>
+<pre>[B-2] Rebranding regression audit
+========================================================================
+  PASS  no leftover 'Bitcoin Signed Message' string
+  PASS  no leftover 'bitcoin:' URI scheme literals
+
+  PASS  no leftover bitcoind / bitcoin-cli in .md docs
+  PASS  no 'Bitcoin' in RPC help strings (HelpExampleCli/HelpExampleRpc)
+  PASS  no 'Bitcoin' in Qt tr() strings (user-visible)
+
+  PASS  no "Bitcoin Core" string outside attribution context
+  SKIP  test reruns skipped (set RERUN_TESTS=1 to enable)
+------------------------------------------------------------------------
+  6/6 checks passed
+AUDIT RESULT: PASS  [B-2]</pre>
+</section>
+
+<section>
+  <h2>5. Common pitfalls</h2>
+  <ul>
+    <li><b>Source filenames like <code>bitcoin-util.cpp</code>.</b> The
+        audit ignores file paths but flags binary-name references in prose.
+        We deliberately do NOT rename the C++ source files to avoid
+        merge churn against upstream Bitcoin Core.</li>
+    <li><b>Copyright lines.</b> "Copyright (c) 2009-2025 The Bitcoin
+        Core developers" stays everywhere it currently appears &mdash;
+        that is correct attribution and the audit ignores it.</li>
+    <li><b>Translation files.</b> <code>.ts</code> / <code>.po</code> /
+        <code>.xlf</code> are auto-generated from the source by the Qt
+        toolchain; the audit excludes them.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>6. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-rebranding.sh">
+        contrib/testing/audit/audit-rebranding.sh</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/SECURITY-AUDIT.md#findings-and-remediation-phase-11-first-run">
+        doc/SECURITY-AUDIT.md &mdash; Findings &amp; remediation</a></li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/audit-simd-blake3.html">B-1 SIMD BLAKE3</a>
+  <a class="next" href="/testing/audit-hd-coin-type.html">W-2 HD coin_type</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

@@ -4,721 +4,301 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>b3chain — Testing &amp; Verification</title>
+  <title>b3chain &mdash; Testing &amp; Verification</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-  <style>
-    :root{
-      --bg:#fff;
-      --panel:#fafafa;
-      --text:#1a1a1a;
-      --muted:#555;
-      --line:#ddd;
-      --accent:#1a1a1a;
-      --warn-bg:#f9f6ee;
-      --warn-border:#d4c9a8;
-      --pass:#1a7a3a;
-      --fail:#a02020;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:var(--sans);
-      background:var(--bg);
-      color:var(--text);
-      line-height:1.6;
-    }
-    .wrap{max-width:920px;margin:0 auto;padding:28px 18px 56px}
-    header,section,.card{
-      border:1px solid var(--line);
-      border-radius:8px;
-      background:var(--panel);
-      padding:18px;
-    }
-    .nav{
-      font-size:13px;
-      color:var(--muted);
-      margin-bottom:14px;
-    }
-    .nav a{color:var(--accent);text-decoration:none}
-    .nav a:hover{text-decoration:underline}
-    h1{margin:0;font-size:28px}
-    h2{margin:0 0 10px;font-size:18px}
-    h3{margin:16px 0 8px;font-size:15px;font-weight:600}
-    p{margin:8px 0}
-    a{color:var(--accent)}
-    .subtitle{color:var(--muted);margin-top:8px;max-width:72ch}
-    .warn{
-      border:1px solid var(--warn-border);
-      background:var(--warn-bg);
-      padding:12px;
-      border-radius:8px;
-      margin-top:12px;
-      font-size:14px;
-    }
-    .warn b{display:block;margin-bottom:4px}
-    .content{margin-top:18px;display:flex;flex-direction:column;gap:16px}
-    .muted{color:var(--muted)}
-    .small{font-size:13px;color:var(--muted)}
-    .hr{height:1px;background:var(--line);margin:14px 0}
-    ul{margin:8px 0 0 18px}
-    li{margin:5px 0}
-    pre{
-      font-family:var(--mono);
-      font-size:12.5px;
-      padding:14px;
-      border-radius:8px;
-      border:1px solid var(--line);
-      background:#f5f5f5;
-      margin:10px 0 0;
-      overflow-x:auto;
-      line-height:1.45;
-      white-space:pre;
-      word-wrap:normal;
-    }
-    code{
-      font-family:var(--mono);
-      font-size:13px;
-      background:#f0f0f0;
-      padding:2px 5px;
-      border-radius:3px;
-    }
-    table{
-      width:100%;
-      border-collapse:collapse;
-      margin:10px 0 0;
-      font-size:13.5px;
-    }
-    th{
-      text-align:left;
-      padding:8px 10px;
-      border-bottom:2px solid var(--line);
-      font-weight:600;
-      font-size:12px;
-      text-transform:uppercase;
-      letter-spacing:.04em;
-      color:var(--muted);
-    }
-    td{
-      padding:7px 10px;
-      border-bottom:1px solid var(--line);
-      vertical-align:top;
-    }
-    tr:last-child td{border-bottom:none}
-    .hash{
-      font-family:var(--mono);
-      font-size:11.5px;
-      word-break:break-all;
-    }
-    .pass{color:var(--pass);font-weight:600}
-    .kvs{
-      display:grid;
-      grid-template-columns:150px 1fr;
-      gap:6px 12px;
-      margin-top:10px;
-      font-size:14px;
-    }
-    .kvs div{padding:5px 0;border-bottom:1px dashed var(--line)}
-    .pill{
-      display:inline-block;
-      border:1px solid var(--line);
-      padding:4px 10px;
-      border-radius:999px;
-      font-size:12px;
-      color:var(--muted);
-      margin:2px 4px 2px 0;
-    }
-    .pill b{color:var(--text)}
-    .copy-btn{
-      display:inline-block;
-      margin-top:6px;
-      padding:5px 12px;
-      font-size:12px;
-      font-family:var(--mono);
-      border:1px solid var(--line);
-      border-radius:5px;
-      background:var(--panel);
-      color:var(--muted);
-      cursor:pointer;
-      user-select:none;
-    }
-    .copy-btn:hover{background:#eee;color:var(--text)}
-    .toc{margin:12px 0 0 18px}
-    .toc li{margin:4px 0}
-    .toc a{text-decoration:none;font-size:14px}
-    .toc a:hover{text-decoration:underline}
-    .sidebar{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:16px;
-      margin-top:0;
-    }
-    @media(max-width:680px){.sidebar{grid-template-columns:1fr}}
-    footer{margin-top:18px;color:var(--muted);font-size:13px}
-    .anchor{color:var(--muted);text-decoration:none;margin-left:4px;opacity:0}
-    h2:hover .anchor,h3:hover .anchor{opacity:.5}
-    .anchor:hover{opacity:1 !important}
-  </style>
+  <link rel="stylesheet" href="/css/style.css" />
 </head>
 
 <body>
 <div class="wrap">
 
-<!-- Navigation -->
 <div class="nav">
   <a href="index.html">b3chain</a> / Testing &amp; Verification
 </div>
 
-<!-- Header -->
 <header>
   <h1>Testing &amp; Verification</h1>
   <p class="subtitle">
-    Technical tools for independently testing b3chain components.
-    Everything on this page is engineering documentation, not a product announcement.
+    Reproducible technical tests for every component of b3chain. This is the
+    landing page for everything an independent reviewer needs to verify our
+    claims: PoW reference code, multi-node regtest simulation, the structured
+    Phase 11 self-audit, and a live 51% attack walkthrough.
   </p>
 
-  <div style="margin-top:10px">
+  <div class="tagrow">
     <span class="pill">Purpose: <b>independent verification</b></span>
     <span class="pill">Environment: <b>regtest only</b></span>
-    <span class="pill">Language: <b>Python 3 + Bash</b></span>
+    <span class="pill">Languages: <b>Python 3 + Bash + C++</b></span>
   </div>
 
   <div class="warn">
     <b>This page does not represent a live network.</b>
-    These tools run on a local regtest environment only. There is no mainnet, no token,
-    and no asset. Parameters may change before any consensus freeze.
+    Every script runs on a local regtest environment. There is no mainnet,
+    no token, no airdrop. Parameters may change before any consensus freeze.
   </div>
 </header>
 
-<!-- Table of contents -->
+<!-- ================================================================ -->
+<!-- Section 1: Reproducible tests (existing) -->
+<!-- ================================================================ -->
 <div class="content">
-<section>
-  <h2>Contents</h2>
-  <ol class="toc">
-    <li><a href="#purpose">Purpose of this page</a></li>
-    <li><a href="#prerequisites">Prerequisites</a></li>
-    <li><a href="#pow-verifier">PoW Reference Verifier</a> — verify-blake3-pow.py</li>
-    <li><a href="#test-vectors">BLAKE3 Test Vectors</a></li>
-    <li><a href="#regtest-sim">Regtest Network Simulation</a> — regtest-simulation.sh</li>
-    <li><a href="#test-results">Current Test Results</a></li>
-    <li><a href="#limitations">Known Limitations</a></li>
-    <li><a href="#report-bugs">Reporting Issues</a></li>
-    <li><a href="#source">Source Files</a></li>
-  </ol>
+<section id="reproducible-tests">
+  <h2>1. Reproducible tests <a class="anchor" href="#reproducible-tests">#</a></h2>
+  <p>
+    Standalone scripts shipped in
+    <a href="https://github.com/b3chain/b3chain/tree/b3chain-main/contrib/testing">
+    <code>contrib/testing/</code></a>. Run any of them on your own machine and
+    diff the output against ours.
+  </p>
+
+  <div class="card-grid">
+    <a class="card" href="testing/pow-verifier.html">
+      <h3>PoW reference verifier</h3>
+      <div class="desc">
+        Standalone Python script: verifies the double BLAKE3-256
+        proof-of-work against published test vectors. No node needed.
+      </div>
+      <div class="meta">
+        <code>verify-blake3-pow.py</code>
+        <span class="badge badge-pass">PASS</span>
+      </div>
+    </a>
+
+    <a class="card" href="testing/test-vectors.html">
+      <h3>BLAKE3 test vectors</h3>
+      <div class="desc">
+        Canonical input/output pairs for BLAKE3-256 and the double-hash
+        construction.  Use them to validate any PoW miner.
+      </div>
+      <div class="meta">
+        <code>test vectors</code>
+        <span class="badge badge-pass">PASS</span>
+      </div>
+    </a>
+
+    <a class="card" href="testing/regtest-simulation.html">
+      <h3>Regtest network simulation</h3>
+      <div class="desc">
+        3-node regtest network mining a full 2016-block retarget period.
+        Verifies block propagation, sync, mining, wallet sends, UTXO consistency.
+      </div>
+      <div class="meta">
+        <code>regtest-simulation.sh</code>
+        <span class="badge badge-pass">PASS</span>
+      </div>
+    </a>
+
+    <a class="card" href="testing/test-results.html">
+      <h3>Current test results</h3>
+      <div class="desc">
+        Summary of the latest C++ unit tests, Python functional tests,
+        regtest simulation, and Phase 11 audit run.
+      </div>
+      <div class="meta">
+        <code>summary</code>
+        <span class="badge badge-pass">UPDATED</span>
+      </div>
+    </a>
+
+    <a class="card" href="testing/limitations.html">
+      <h3>Known limitations</h3>
+      <div class="desc">
+        Things this test corpus deliberately does <em>not</em> cover, and
+        what an external auditor should still look at.
+      </div>
+      <div class="meta">
+        <code>scope</code>
+        <span class="badge badge-skip">INFO</span>
+      </div>
+    </a>
+
+    <a class="card" href="testing/reporting.html">
+      <h3>Reporting issues</h3>
+      <div class="desc">
+        How to file a bug, how to disclose a security finding privately,
+        and what we'll respond to.
+      </div>
+      <div class="meta">
+        <code>contact</code>
+        <span class="badge badge-skip">INFO</span>
+      </div>
+    </a>
+  </div>
 </section>
 
+<!-- ================================================================ -->
+<!-- Section 2: Phase 11 security audit -->
+<!-- ================================================================ -->
+<section id="phase-11-audit">
+  <h2>2. Phase 11 security audit <a class="anchor" href="#phase-11-audit">#</a></h2>
+  <p>
+    A structured self-audit run before any mainnet launch. Each item below
+    has a dedicated audit script and a result page with a tutorial,
+    expected output, and how to reproduce. The full master checklist is
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/SECURITY-AUDIT.md">
+    <code>doc/SECURITY-AUDIT.md</code></a>.
+  </p>
 
-<!-- ================================================================ -->
-<!-- Section 1: Purpose -->
-<!-- ================================================================ -->
-<section id="purpose">
-  <h2>1. Purpose of this page <a class="anchor" href="#purpose">#</a></h2>
   <p>
-    This page provides technical tools to <b>independently test and verify</b>
-    b3chain's proof-of-work implementation during early development.
+    <a href="testing/security-audit.html"><b>Open the master checklist &rarr;</b></a>
   </p>
-  <p>
-    Publishing these tools is how serious cryptographic projects behave.
-    We expect people to test the system, and we believe our implementation
-    is correct. If it isn't, we want to know.
-  </p>
-  <p class="muted" style="font-size:14px">
-    If someone claims to offer a "B3C token" or "b3chain asset," you can always verify:
-    if it is not reproducible using these published test scripts and the reference
-    PoW implementation, it is not b3chain.
-  </p>
+
+  <div class="card-grid">
+    <a class="card" href="testing/audit-supply-cap.html">
+      <h3>C-1..C-4 &mdash; Supply cap</h3>
+      <div class="desc">
+        Subsidy halves every 210 000 blocks; total supply caps at
+        20 999 999.97690000 B3C; subsidy is exactly 0 after halving 64.
+      </div>
+      <div class="meta">
+        <code>audit-supply-cap.py</code>
+        <span class="badge badge-pass">PASS</span>
+      </div>
+    </a>
+
+    <a class="card" href="testing/audit-pow-isolation.html">
+      <h3>H-1 &mdash; PoW / Block-ID isolation</h3>
+      <div class="desc">
+        Every PoW check uses GetPoWHash (BLAKE3d); block IDs use GetHash
+        (SHA-256d). Static + functional verification.
+      </div>
+      <div class="meta">
+        <code>audit-pow-isolation.py</code>
+        <span class="badge badge-pass">PASS</span>
+      </div>
+    </a>
+
+    <a class="card" href="testing/audit-network-isolation.html">
+      <h3>N-1 &mdash; Network isolation</h3>
+      <div class="desc">
+        Bitcoin mainnet magic bytes are rejected; DNS seed list contains
+        zero Bitcoin entries; mainnet vSeeds explicitly cleared.
+      </div>
+      <div class="meta">
+        <code>audit-network-isolation.py</code>
+        <span class="badge badge-pass">PASS</span>
+      </div>
+    </a>
+
+    <a class="card" href="testing/audit-address-rejection.html">
+      <h3>W-1 &mdash; Address rejection</h3>
+      <div class="desc">
+        36 real Bitcoin addresses (P2PKH, P2SH, Bech32, Taproot) all
+        rejected; xpub format isolated.
+      </div>
+      <div class="meta">
+        <code>audit-address-rejection.py</code>
+        <span class="badge badge-pass">PASS</span>
+      </div>
+    </a>
+
+    <a class="card" href="testing/audit-simd-blake3.html">
+      <h3>B-1 &mdash; SIMD BLAKE3 differential</h3>
+      <div class="desc">
+        SIMD BLAKE3 byte-identical to portable C reference across edge
+        sizes and 1000-input fuzz.
+      </div>
+      <div class="meta">
+        <code>audit-simd-blake3.py</code>
+        <span class="badge badge-pass">PASS</span>
+      </div>
+    </a>
+
+    <a class="card" href="testing/audit-rebranding.html">
+      <h3>B-2 &mdash; Rebranding regression</h3>
+      <div class="desc">
+        Forbidden Bitcoin patterns absent from user-visible code. Caught
+        and fixed leftover strings from the rebranding pass.
+      </div>
+      <div class="meta">
+        <code>audit-rebranding.sh</code>
+        <span class="badge badge-pass">PASS</span>
+      </div>
+    </a>
+
+    <a class="card" href="testing/audit-hd-coin-type.html">
+      <h3>W-2 &mdash; HD wallet coin_type</h3>
+      <div class="desc">
+        BIP44 coin_type 9333 (mainnet) and 1 (testnet/regtest);
+        descriptors differ from Bitcoin xpub derivations.
+      </div>
+      <div class="meta">
+        <code>audit-hd-coin-type.py</code>
+        <span class="badge badge-pass">PASS</span>
+      </div>
+    </a>
+  </div>
 </section>
 
+<!-- ================================================================ -->
+<!-- Section 3: Attacks &amp; defense -->
+<!-- ================================================================ -->
+<section id="attacks-defense">
+  <h2>3. Attacks &amp; defense <a class="anchor" href="#attacks-defense">#</a></h2>
+  <p>
+    Educational walkthroughs of how known PoW attacks work and what protects
+    against them, with live regtest demonstrations.
+  </p>
+
+  <div class="card-grid">
+    <a class="card" href="testing/51-attack.html">
+      <h3>A-1 &mdash; 51% attack (live demo)</h3>
+      <div class="desc">
+        End-to-end double-spend simulation: honest cluster vs attacker
+        cluster, 6-confirmation reorg, Nakamoto math, cost calculator,
+        defenses.
+      </div>
+      <div class="meta">
+        <code>audit-51-attack-sim.py</code>
+        <span class="badge badge-pass">DEMO</span>
+      </div>
+    </a>
+  </div>
+</section>
 
 <!-- ================================================================ -->
-<!-- Section 2: Prerequisites -->
+<!-- Section 4: Quick prerequisites &amp; copy-paste run-all -->
 <!-- ================================================================ -->
-<section id="prerequisites">
-  <h2>2. Prerequisites <a class="anchor" href="#prerequisites">#</a></h2>
-  <p>To run the verification tools, you need:</p>
+<section id="quick-start">
+  <h2>4. Run everything yourself <a class="anchor" href="#quick-start">#</a></h2>
 
+  <h3>Prerequisites</h3>
   <div class="kvs">
     <div>OS</div><div>Linux or WSL2 on Windows</div>
     <div>Python</div><div>3.10 or later</div>
     <div>blake3</div><div><code>pip3 install blake3</code></div>
-    <div>b3chaind</div><div>Only for regtest simulation (not needed for PoW verifier)</div>
+    <div>b3chaind</div><div>build with <code>cmake</code> (see <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/build-unix.md">build-unix.md</a>)</div>
   </div>
 
-  <h3>Quick setup</h3>
-<pre>
-# Install the BLAKE3 Python binding
-pip3 install blake3
-
-# Clone the repository (when public)
+  <h3>One-shot</h3>
+<pre># Clone &amp; build
 git clone https://github.com/b3chain/b3chain.git
 cd b3chain
-
-# Build (for regtest simulation only)
 mkdir build &amp;&amp; cd build
-cmake ..
-cmake --build . -j$(nproc)
-</pre>
-</section>
+cmake .. &amp;&amp; cmake --build . -j$(nproc)
+cd ..
 
-
-<!-- ================================================================ -->
-<!-- Section 3: PoW Verifier -->
-<!-- ================================================================ -->
-<section id="pow-verifier">
-  <h2>3. PoW Reference Verifier <a class="anchor" href="#pow-verifier">#</a></h2>
-  <p>
-    <code>verify-blake3-pow.py</code> is a standalone Python script that verifies
-    the double BLAKE3-256 proof-of-work algorithm against known test vectors.
-    It requires <b>no running node</b> — just Python and the blake3 library.
-  </p>
-
-  <h3>What it verifies</h3>
-  <ul>
-    <li>Single BLAKE3-256 hash correctness (3 vectors)</li>
-    <li>Double BLAKE3-256 construction correctness (2 vectors)</li>
-    <li>Block header PoW hash computation (4 vectors)</li>
-    <li>(Optional) Live block PoW validation from a running node</li>
-  </ul>
-
-  <h3>The PoW formula</h3>
-<pre>
-PoW_hash = BLAKE3( BLAKE3( serialize(block_header) ) )
-
-where block_header is the standard 80-byte encoding:
-  nVersion     (4 bytes, int32, little-endian)
-  hashPrevBlock (32 bytes, uint256, little-endian)
-  hashMerkleRoot(32 bytes, uint256, little-endian)
-  nTime        (4 bytes, uint32, little-endian)
-  nBits        (4 bytes, uint32, little-endian)
-  nNonce       (4 bytes, uint32, little-endian)
-</pre>
-
-  <p class="small">
-    Block identity hashes (block hash, txid, merkle tree) still use double SHA-256,
-    identical to Bitcoin. Only PoW validation uses BLAKE3.
-  </p>
-
-  <h3>Usage</h3>
-<pre>
-# Verify test vectors only (no node required)
+# Reproducible tests
+bash contrib/testing/regtest-simulation.sh
 python3 contrib/testing/verify-blake3-pow.py
 
-# Verify test vectors + live blocks from a running regtest node
-python3 contrib/testing/verify-blake3-pow.py --rpc-port=18545
-</pre>
-
-  <h3>Expected output</h3>
-<pre>
-============================================================
- B3Chain BLAKE3 PoW Verification
-============================================================
-
-[1/4] Single BLAKE3-256 vectors
-  PASS: BLAKE3('')
-  PASS: BLAKE3('b3chain')
-  PASS: BLAKE3('abc')
-
-[2/4] Double BLAKE3-256 vectors
-  PASS: BLAKE3(BLAKE3(''))
-  PASS: BLAKE3(BLAKE3('b3chain'))
-
-[3/4] Block header PoW hash vectors
-  PASS: 80-zero-bytes PoW hash
-  PASS: 80-zero-bytes ID hash
-  PASS: version=1 PoW hash
-  PASS: version=1 ID hash
-
-[4/4] Live block verification
-  SKIP: No --rpc-port specified
-
-============================================================
- RESULTS: 9/9 passed, 0 failed
-============================================================
- All tests passed!
-</pre>
+# Phase 11 self-audit (every check)
+bash contrib/testing/audit/run-all.sh</pre>
 
   <p class="small">
-    Verifiers must always match the consensus implementation byte-for-byte.
-    If your verifier produces different hashes, your implementation is wrong —
-    do not assume the reference is incorrect without investigation.
+    Each script prints <code>AUDIT RESULT: PASS</code> or
+    <code>AUDIT RESULT: FAIL</code> on its final line, and exits with the
+    matching exit code.
   </p>
 </section>
-
-
-<!-- ================================================================ -->
-<!-- Section 4: Test Vectors -->
-<!-- ================================================================ -->
-<section id="test-vectors">
-  <h2>4. BLAKE3 Test Vectors <a class="anchor" href="#test-vectors">#</a></h2>
-  <p>
-    These are the authoritative test vectors for b3chain's PoW algorithm.
-    Use them to verify any independent implementation.
-  </p>
-
-  <h3>Single BLAKE3-256</h3>
-  <table>
-    <tr><th>Input</th><th>BLAKE3 Hash</th></tr>
-    <tr>
-      <td><code>""</code> (empty)</td>
-      <td class="hash">af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262</td>
-    </tr>
-    <tr>
-      <td><code>"b3chain"</code></td>
-      <td class="hash">492530272073ef2fb434ca4d9492bcea09502b24642b7e04021892bdda2aa806</td>
-    </tr>
-    <tr>
-      <td><code>"abc"</code></td>
-      <td class="hash">6437b3ac38465133ffb63b75273a8db548c558465d79db03fd359c6cd5bd9d85</td>
-    </tr>
-  </table>
-
-  <h3>Double BLAKE3-256</h3>
-  <table>
-    <tr><th>Input</th><th>BLAKE3(BLAKE3(input))</th></tr>
-    <tr>
-      <td><code>""</code> (empty)</td>
-      <td class="hash">82878ed8a480ee41775636820e05a934ca5c747223ca64306658ee5982e6c227</td>
-    </tr>
-    <tr>
-      <td><code>"b3chain"</code></td>
-      <td class="hash">f09be63a21ff0bc5646b5ddcadef1c43f8e0e47815793cff909cab0a345396d3</td>
-    </tr>
-  </table>
-
-  <h3>Block header vectors</h3>
-  <p class="small">
-    Hashes are shown in big-endian display format (most significant byte first),
-    the standard for displaying block hashes. Internal byte order is little-endian.
-  </p>
-
-  <table>
-    <tr><th>Header</th><th>PoW Hash (BLAKE3)</th><th>ID Hash (SHA256d)</th></tr>
-    <tr>
-      <td>80 zero bytes<br><span class="small">0x00 repeated 80 times</span></td>
-      <td class="hash">fb6d63b21d8c9f21<wbr>5de0e4fd9f4d0e7e<wbr>d53ff023c7243e76<wbr>f5a7367b2a4507b6</td>
-      <td class="hash">14508459b221041e<wbr>ab257d2baaa74597<wbr>75ba748246c84036<wbr>09eb708f0e57e74b</td>
-    </tr>
-    <tr>
-      <td>Version=1, rest zeros<br><span class="small">0x01000000 + 76 zero bytes</span></td>
-      <td class="hash">a8b60a455b3576a7<wbr>01ed73ad8ebf8388<wbr>39917a0331bfb6df<wbr>a99b77641c858c61</td>
-      <td class="hash">4ddd9f0855d58a37<wbr>5be5a763e5f51ece<wbr>853d30525fcd9a3e<wbr>477c2194fedb549f</td>
-    </tr>
-  </table>
-
-  <h3>Pseudocode</h3>
-<pre>
-import blake3, hashlib, struct
-
-def double_blake3(data: bytes) -> bytes:
-    h1 = blake3.blake3(data).digest()     # first pass (32 bytes)
-    return blake3.blake3(h1).digest()      # second pass (32 bytes)
-
-def double_sha256(data: bytes) -> bytes:
-    return hashlib.sha256(
-        hashlib.sha256(data).digest()
-    ).digest()
-
-# Example: 80 zero-byte header
-header = b'\x00' * 80
-pow_hash  = double_blake3(header)   # used for PoW validation
-id_hash   = double_sha256(header)   # used for block identity
-</pre>
-</section>
-
-
-<!-- ================================================================ -->
-<!-- Section 5: Regtest Simulation -->
-<!-- ================================================================ -->
-<section id="regtest-sim">
-  <h2>5. Regtest Network Simulation <a class="anchor" href="#regtest-sim">#</a></h2>
-  <p>
-    <code>regtest-simulation.sh</code> launches a 3-node b3chain network on
-    localhost, mines 2016 blocks (a full difficulty retarget period), and runs
-    19 automated checks covering consensus, wallet operations, and chain consistency.
-  </p>
-
-  <h3>What it tests</h3>
-  <table>
-    <tr><th>#</th><th>Check</th><th>What it verifies</th></tr>
-    <tr><td>1–3</td><td>Node startup</td><td>All 3 nodes initialize at genesis (height 0)</td></tr>
-    <tr><td>4</td><td>Address prefix</td><td>Regtest addresses use <code>b3rt1</code> Bech32 HRP</td></tr>
-    <tr><td>5</td><td>Peer connectivity</td><td>Nodes discover and connect to each other via P2P</td></tr>
-    <tr><td>6</td><td>Mining 2016 blocks</td><td>BLAKE3 PoW mining works via <code>generatetoaddress</code> RPC</td></tr>
-    <tr><td>7–8</td><td>Block sync</td><td>Mined blocks propagate to all 3 nodes</td></tr>
-    <tr><td>9–10</td><td>Tip consensus</td><td>All nodes agree on the same chain tip hash</td></tr>
-    <tr><td>11</td><td>Miner balance</td><td>Miner wallet shows accumulated block rewards</td></tr>
-    <tr><td>12</td><td>Block subsidy</td><td>Block 1 coinbase pays exactly 50.00000000 B3C</td></tr>
-    <tr><td>13–14</td><td>Wallet send</td><td>Miner sends B3C to nodes 1 and 2; balances update</td></tr>
-    <tr><td>15</td><td>Cross-node send</td><td>Node 1 sends to node 2 via P2P relay + confirmation</td></tr>
-    <tr><td>16</td><td>Chain work</td><td>Cumulative proof-of-work is identical across nodes</td></tr>
-    <tr><td>17</td><td>Genesis hash</td><td>Block 0 matches the hardcoded regtest genesis hash</td></tr>
-    <tr><td>18</td><td>Mid-chain hash</td><td>Block 1008 hash is identical across all 3 nodes</td></tr>
-    <tr><td>19</td><td>UTXO set</td><td>Serialized UTXO set hash matches across all nodes</td></tr>
-  </table>
-
-  <h3>Usage</h3>
-<pre>
-# From the repository root (requires compiled b3chaind)
-bash contrib/testing/regtest-simulation.sh
-
-# Or specify a custom build directory
-BINDIR=/path/to/build/bin bash contrib/testing/regtest-simulation.sh
-</pre>
-
-  <h3>Expected output</h3>
-<pre>
-============================================================
- B3Chain Regtest Simulation (2016 blocks, 3 nodes)
-============================================================
-
-[1/8] Setting up test environment...
-  PASS: Node 0 started at height 0
-  PASS: Node 1 started at height 0
-  PASS: Node 2 started at height 0
-
-[2/8] Creating wallets...
-  Node 0 (miner):  b3rt1q...
-  Node 1 (wallet): b3rt1q...
-  Node 2 (wallet): b3rt1q...
-  PASS: Address uses b3rt prefix
-
-[3/8] Testing peer connectivity...
-  PASS: Node 0 has 3 peer(s)
-
-[4/8] Mining 2016 blocks (full retarget period)...
-  Mined 500 / 2016 blocks...
-  Mined 1000 / 2016 blocks...
-  Mined 1500 / 2016 blocks...
-  Mined 2000 / 2016 blocks...
-  Mined 2016 / 2016 blocks...
-  Mining took 44s
-  PASS: Node 0 at height 2016
-  Waiting for block propagation...
-  PASS: Node 1 synced to 2016
-  PASS: Node 2 synced to 2016
-  PASS: All nodes agree on tip
-  PASS: All nodes agree on tip (node2)
-
-[5/8] Verifying mining rewards and subsidy...
-  Miner balance: 14947.76611201 B3C
-  PASS: Miner has positive balance
-  PASS: Block 1 subsidy (50.00000000)
-
-[6/8] Testing wallet send/receive...
-  Sent 10.5 B3C to node 1
-  Sent 5.25 B3C to node 2
-  PASS: Node 1 received 10.5 B3C
-  PASS: Node 2 received 5.25 B3C
-  Node 1 sent 2.0 B3C to node 2
-  Tx in miner mempool after 5s
-  PASS: Cross-node send succeeded
-
-[7/8] Verifying chain consistency...
-  PASS: Chain work matches across nodes
-  PASS: Genesis hash correct
-  PASS: Block 1008 hash consistent
-
-[8/8] Verifying UTXO set...
-  PASS: UTXO hash matches across nodes
-
-============================================================
- RESULTS: 19 passed, 0 failed
-============================================================
- All tests passed!
-</pre>
-
-  <p class="small">
-    Runtime is approximately 70 seconds on modern hardware. The script
-    automatically cleans up all node processes on exit.
-  </p>
-
-  <h3>How to confirm you passed</h3>
-  <p>
-    The final line should read <b>"19 passed, 0 failed"</b> and the exit
-    code should be 0. Any deviation indicates a problem — please report it.
-  </p>
-</section>
-
-
-<!-- ================================================================ -->
-<!-- Section 6: Test Results -->
-<!-- ================================================================ -->
-<section id="test-results">
-  <h2>6. Current Test Results <a class="anchor" href="#test-results">#</a></h2>
-  <p class="muted">
-    Results from the most recent full test run on the development branch.
-  </p>
-
-  <table>
-    <tr><th>Suite</th><th>Passed</th><th>Failed</th><th>Skipped</th><th>Notes</th></tr>
-    <tr>
-      <td>C++ unit tests</td>
-      <td class="pass">148</td>
-      <td>0</td>
-      <td>1</td>
-      <td>Run via <code>ctest</code></td>
-    </tr>
-    <tr>
-      <td>Python functional tests</td>
-      <td class="pass">258</td>
-      <td>0</td>
-      <td>19</td>
-      <td>Run via <code>test_runner.py</code></td>
-    </tr>
-    <tr>
-      <td>Regtest simulation</td>
-      <td class="pass">19</td>
-      <td>0</td>
-      <td>0</td>
-      <td>3 nodes, 2016 blocks</td>
-    </tr>
-    <tr>
-      <td>BLAKE3 PoW verification</td>
-      <td class="pass">9</td>
-      <td>0</td>
-      <td>0</td>
-      <td>Standalone vectors</td>
-    </tr>
-  </table>
-
-  <h3>Skipped tests</h3>
-  <p class="small">
-    Skips are intentional and documented. They fall into four categories:
-  </p>
-  <ul class="small">
-    <li>Tests requiring SHA-256d-mined blocks (incompatible with BLAKE3 PoW)</li>
-    <li>Tests requiring assumeutxo checkpoints (not yet configured for b3chain)</li>
-    <li>Tests requiring BDB wallet support (b3chain uses SQLite only)</li>
-    <li>Tests requiring external tools not present in the build environment</li>
-  </ul>
-</section>
-
-
-<!-- ================================================================ -->
-<!-- Section 7: Limitations -->
-<!-- ================================================================ -->
-<section id="limitations">
-  <h2>7. Known Limitations <a class="anchor" href="#limitations">#</a></h2>
-  <div class="warn">
-    <b>Honest engineering disclosure.</b>
-    These tools are provided for testing and research only. They do not represent
-    a mainnet environment, and parameters may change before any consensus freeze.
-  </div>
-  <ul>
-    <li>All tests run on <b>regtest</b> — a private, local network with
-        minimal difficulty. Real-world network conditions are not simulated.</li>
-    <li>Consensus parameters (block time, reward schedule, difficulty limits)
-        are not frozen and may change.</li>
-    <li>The BLAKE3 library is vendored from the official repository but has
-        not undergone independent audit specific to this integration.</li>
-    <li>SIMD-accelerated BLAKE3 paths (SSE2/AVX2/AVX-512) are enabled on x86-64 Linux.
-        Other platforms use the portable C implementation.</li>
-    <li>No mainnet exists. These tests do not prove that a production network works —
-        they prove that the code produces correct results in isolation.</li>
-  </ul>
-</section>
-
-
-<!-- ================================================================ -->
-<!-- Section 8: Report Bugs -->
-<!-- ================================================================ -->
-<section id="report-bugs">
-  <h2>8. Reporting Issues <a class="anchor" href="#report-bugs">#</a></h2>
-  <p>
-    If you find a bug in any test script or a discrepancy in the PoW verification,
-    we want to hear about it.
-  </p>
-
-  <div class="sidebar">
-    <div class="card">
-      <h3>General bugs</h3>
-      <p class="small">
-        Open an issue on the project repository with:
-      </p>
-      <ul class="small">
-        <li>Your OS and Python version</li>
-        <li>The exact command you ran</li>
-        <li>Full output (copy/paste)</li>
-        <li>Expected vs. actual result</li>
-      </ul>
-    </div>
-    <div class="card">
-      <h3>Security issues</h3>
-      <p class="small">
-        For vulnerabilities that could affect consensus or fund safety:
-      </p>
-      <ul class="small">
-        <li>Do not disclose publicly</li>
-        <li>Email: <b>security@b3chain.org</b></li>
-        <li>We aim to acknowledge within 24 hours</li>
-        <li>Coordinated disclosure after fix</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-
-<!-- ================================================================ -->
-<!-- Section 9: Source Files -->
-<!-- ================================================================ -->
-<section id="source">
-  <h2>9. Source Files <a class="anchor" href="#source">#</a></h2>
-  <p>
-    All testing and verification tools live in the main repository
-    under <code>contrib/testing/</code>.
-  </p>
-
-  <table>
-    <tr><th>File</th><th>Purpose</th></tr>
-    <tr>
-      <td><code>contrib/testing/verify-blake3-pow.py</code></td>
-      <td>Standalone BLAKE3 PoW verification (9 test vectors)</td>
-    </tr>
-    <tr>
-      <td><code>contrib/testing/regtest-simulation.sh</code></td>
-      <td>3-node regtest simulation (19 checks, 2016 blocks)</td>
-    </tr>
-    <tr>
-      <td><code>contrib/miner/b3chain-cpuminer.py</code></td>
-      <td>Reference CPU miner (getblocktemplate/submitblock)</td>
-    </tr>
-    <tr>
-      <td><code>contrib/genesis/mine_all_genesis.py</code></td>
-      <td>Genesis block miner for all networks</td>
-    </tr>
-    <tr>
-      <td><code>doc/b3chain-pow-design.md</code></td>
-      <td>PoW design document (dual-hash architecture)</td>
-    </tr>
-    <tr>
-      <td><code>doc/mining.md</code></td>
-      <td>Mining documentation and stratum notes</td>
-    </tr>
-  </table>
-
-  <div class="hr"></div>
-
-  <h3>Related C++ unit tests</h3>
-  <table>
-    <tr><th>Test</th><th>What it covers</th></tr>
-    <tr><td><code>blake3_single_hash</code></td><td>BLAKE3 algorithm correctness</td></tr>
-    <tr><td><code>blake3_double_hash</code></td><td>Double-BLAKE3 construction</td></tr>
-    <tr><td><code>blake3_dual_hash_design</code></td><td>GetHash() vs GetPoWHash() independence</td></tr>
-    <tr><td><code>blake3_rejects_sha256d_nonce</code></td><td>SHA-256d nonces don't satisfy BLAKE3</td></tr>
-    <tr><td><code>blake3_simd_acceleration</code></td><td>SIMD dispatch and performance</td></tr>
-    <tr><td><code>miner_tests</code></td><td>Full block mining pipeline</td></tr>
-    <tr><td><code>pow_tests</code></td><td>Difficulty target checking</td></tr>
-  </table>
-</section>
-
-</div><!-- /.content -->
+</div>
 
 <footer>
-  <p>© <span id="y"></span> b3chain. Engineering documentation — not a product offering.</p>
+  <p>&copy; <span id="y"></span> b3chain. For information only.
+     <a href="index.html">&larr; back to index</a></p>
 </footer>
 
-</div><!-- /.wrap -->
+</div>
 
 <script>
   document.getElementById("y").textContent = new Date().getFullYear();

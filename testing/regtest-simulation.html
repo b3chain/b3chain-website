@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; Regtest Network Simulation</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  Regtest Network Simulation
+</div>
+
+<header>
+  <h1>Regtest Network Simulation</h1>
+  <p class="subtitle">
+    Three b3chain nodes connected in a regtest network, mining a full
+    2 016-block difficulty retarget period and verifying every aspect of
+    block propagation, mining, wallet sends, and chain consistency. End-to-end
+    runtime: about 70 seconds on a modern CPU.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Script: <b>regtest-simulation.sh</b></span>
+    <span class="pill">Nodes: <b>3</b></span>
+    <span class="pill">Blocks: <b>2 016</b></span>
+    <span class="pill">Status: <b><span class="status-pass">19 / 19 PASS</span></b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. What it tests</h2>
+  <table>
+    <thead><tr><th>#</th><th>Check</th><th>Verifies</th></tr></thead>
+    <tbody>
+      <tr><td>1&ndash;3</td><td>Node startup</td><td>All 3 nodes start at height 0</td></tr>
+      <tr><td>4</td><td>Address prefix</td><td>Regtest addresses use <code>b3rt1</code></td></tr>
+      <tr><td>5</td><td>Peer connectivity</td><td>Nodes discover and connect</td></tr>
+      <tr><td>6</td><td>Mining (2 016 blocks)</td><td>BLAKE3 PoW works via <code>generatetoaddress</code></td></tr>
+      <tr><td>7&ndash;8</td><td>Block sync</td><td>Blocks propagate to all nodes</td></tr>
+      <tr><td>9&ndash;10</td><td>Tip consensus</td><td>All 3 nodes agree on the chain tip</td></tr>
+      <tr><td>11</td><td>Miner balance</td><td>Coinbase rewards (50 B3C/block)</td></tr>
+      <tr><td>12</td><td>Block subsidy</td><td>Block 1 coinbase pays exactly 50.00000000 B3C</td></tr>
+      <tr><td>13&ndash;14</td><td>Wallet send</td><td>Node 0 sends to nodes 1 and 2</td></tr>
+      <tr><td>15</td><td>Cross-node send</td><td>Node 1 sends to node 2 (full P2P relay)</td></tr>
+      <tr><td>16</td><td>Chain work</td><td>Cumulative chain work identical across nodes</td></tr>
+      <tr><td>17</td><td>Genesis hash</td><td>Genesis matches expected</td></tr>
+      <tr><td>18</td><td>Mid-chain hash</td><td>Block 1008 hash identical across nodes</td></tr>
+      <tr><td>19</td><td>UTXO set</td><td>UTXO set hash identical across nodes</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>2. Prerequisites</h2>
+  <div class="kvs">
+    <div>OS</div><div>Linux or WSL2</div>
+    <div>b3chaind</div><div>built; expected at <code>build/bin/b3chaind</code></div>
+    <div>Free ports</div><div>29100&ndash;29105 on 127.0.0.1</div>
+  </div>
+</section>
+
+<section>
+  <h2>3. Run it</h2>
+<pre>git clone https://github.com/b3chain/b3chain.git
+cd b3chain
+mkdir build &amp;&amp; cd build
+cmake ..
+cmake --build . -j$(nproc)
+cd ..
+bash contrib/testing/regtest-simulation.sh</pre>
+</section>
+
+<section>
+  <h2>4. Expected output</h2>
+<pre>============================================================
+ B3Chain Regtest Simulation (2016 blocks, 3 nodes)
+============================================================
+[1/8] Setting up test environment...
+  PASS: Node 0 started at height 0
+  PASS: Node 1 started at height 0
+  PASS: Node 2 started at height 0
+[2/8] Creating wallets...
+  Node 0 (miner):  b3rt1q...
+  Node 1 (wallet): b3rt1q...
+  Node 2 (wallet): b3rt1q...
+  PASS: Address uses b3rt prefix
+[3/8] Testing peer connectivity...
+  PASS: Node 0 has 2 peer(s)
+[4/8] Mining 2016 blocks (full retarget period)...
+  Mined 500 / 2016 blocks...
+  Mined 1000 / 2016 blocks...
+  Mined 1500 / 2016 blocks...
+  Mined 2000 / 2016 blocks...
+  Mined 2016 / 2016 blocks...
+  Mining took 65s
+  PASS: Node 0 at height 2016
+  PASS: Node 1 synced to 2016
+  PASS: Node 2 synced to 2016
+  PASS: All nodes agree on tip
+  PASS: All nodes agree on tip (node2)
+[5/8] ...
+============================================================
+ RESULTS: 19 passed, 0 failed
+============================================================
+ All tests passed!</pre>
+</section>
+
+<section>
+  <h2>5. Common pitfalls</h2>
+  <ul>
+    <li><b>Port conflict:</b> if 29100&ndash;29105 are already in use, edit
+        the <code>NODE*_P2P</code> / <code>NODE*_RPC</code> variables at the
+        top of the script.</li>
+    <li><b>WSL crash on stop:</b> <code>cleanup</code> trap calls <code>pkill -f
+        "b3chaind.*regtest_sim"</code>; if you ran a node by hand against the
+        same datadir it may also be killed.</li>
+    <li><b>Slow disk:</b> mining 2 016 blocks writes ~10 MB. If your <code>/tmp</code>
+        is on a slow filesystem, set <code>TESTDIR=/some/fast/path</code> at
+        the top.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>6. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/regtest-simulation.sh">
+        contrib/testing/regtest-simulation.sh</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/README.md">
+        contrib/testing/README.md</a></li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/test-vectors.html">BLAKE3 test vectors</a>
+  <a class="next" href="/testing/test-results.html">Current test results</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>
