@@ -166,6 +166,86 @@ from bip_utils import Bip44Conf, Bip44Coins, Bip44
   </ul>
 </section>
 
+<!-- TUTORIAL -->
+<section class="tutorial">
+<h3>The problem in one sentence</h3>
+<p>Two wallets that derive from the same BIP39 seed but at different <code>coin_type</code>s produce <strong>completely different private keys</strong>, so getting this number right (and proving it) is the boundary between a B3Chain wallet and an accidentally-Bitcoin wallet.</p>
+<h3>The theory</h3>
+<p>BIP44 derivation paths look like:</p>
+<pre>m / 44' / coin_type' / account' / change / address_index</pre>
+<p>Bitcoin's <code>coin_type</code> is <code>0</code>. Litecoin's is <code>2</code>. Ethereum's is <code>60</code>. B3Chain proposes <code>9333</code> (pending SLIP-0044 registration; see <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/b3chain-bip44.md"><code>doc/b3chain-bip44.md</code></a>).</p>
+<p>If two chains accidentally use the same <code>coin_type</code>:</p>
+<ul>
+  <li>The same seed in both wallets derives the same private key.</li>
+  <li>A signed transaction's spending signature is valid for the same</li>
+</ul>
+<p>  UTXO on either chain (if it exists).</p>
+<ul>
+  <li>The likelier failure mode: users treat one chain's xpub as the</li>
+</ul>
+<p>  other's in external tooling, lose track of funds.</p>
+<h3>Hands-on demo</h3>
+<pre>python3 contrib/testing/audit/audit-hd-coin-type.py</pre>
+<p>The script:</p>
+<ol>
+  <li>Greps <code>src/wallet/walletutil.cpp</code> for the literal <code>9333h</code>,</li>
+</ol>
+<p>   verifies it appears once and is gated by <code>!IsTestChain()</code>.</p>
+<ol>
+  <li>Spawns a regtest node, creates a fresh descriptor wallet, calls</li>
+</ol>
+<p>   <code>getaddressinfo</code> on a freshly-derived address, asserts the    <code>hdkeypath</code> contains <code>9333'</code> (mainnet) or <code>1'</code> (testnet/regtest).</p>
+<ol>
+  <li>Independently re-derives the address with the Python <code>bip_utils</code></li>
+</ol>
+<p>   library at <code>m/84'/9333'/0'/0/0</code>, verifies the bytes match.</p>
+<ol>
+  <li>Re-derives at <code>m/84'/0'/0'/0/0</code> (Bitcoin's coin_type), verifies the</li>
+</ol>
+<p>   address is <strong>different</strong>.</p>
+<h3>Exercise</h3>
+<p>In <code>src/wallet/walletutil.cpp</code>, edit the <code>coin_type</code> literal back to <code>0h</code>:</p>
+<pre>// Before
+const std::string coin_type = IsTestChain() ? "1h" : "9333h";
+// After (BAD - silently makes B3Chain mainnet wallets identical to Bitcoin)
+const std::string coin_type = IsTestChain() ? "1h" : "0h";</pre>
+<p>Rebuild, re-run the audit. Expected output:</p>
+<pre>  FAIL  [W-2] descriptor uses coin_type 0 (Bitcoin), expected 9333
+  FAIL  [W-2] cross-derivation: B3Chain address matches Bitcoin coin_type 0 derivation
+AUDIT RESULT: FAIL  [W-2]</pre>
+<p>The second failure is the important one — even if you missed the literal, the cross-derivation test catches the actual semantic bug.</p>
+<h3>What if SLIP-0044 assigns a different number?</h3>
+<p><code>9333</code> is a proposal, not an assignment. The migration plan is in <code>doc/b3chain-bip44.md</code>:</p>
+<ol>
+  <li>Submit a PR to the SLIP-0044 repo requesting <code>9333</code> for B3Chain.</li>
+  <li>If accepted as-is: no migration.</li>
+  <li>If a different number <code>X</code> is assigned: ship a wallet migration</li>
+</ol>
+<p>   that sweeps from <code>9333</code>-derived addresses to <code>X</code>-derived addresses,    continues accepting <code>9333</code> xpubs in <code>importdescriptors</code> for    backward compatibility.</p>
+<ol>
+  <li>If SLIP-0044 takes &gt;12 months: publicly commit to <code>9333</code>.</li>
+</ol>
+<p>Either way, this audit pins the choice and prevents silent drift.</p>
+<h3>Further reading</h3>
+<ul>
+  <li>BIP-44 multi-account hierarchy:</li>
+</ul>
+<p>  github.com/bitcoin/bips/blob/master/bip-0044.mediawiki</p>
+<ul>
+  <li>SLIP-0044 (Trezor / coin_type registry):</li>
+</ul>
+<p>  github.com/satoshilabs/slips/blob/master/slip-0044.md</p>
+<ul>
+  <li>BIP-32 hierarchical deterministic wallets:</li>
+</ul>
+<p>  github.com/bitcoin/bips/blob/master/bip-0032.mediawiki</p>
+<ul>
+  <li>BIP-39 mnemonic seed phrases:</li>
+</ul>
+<p>  github.com/bitcoin/bips/blob/master/bip-0039.mediawiki</p>
+</section>
+<!-- /TUTORIAL -->
+
 <div class="page-nav">
   <a class="prev" href="/testing/audit-rebranding.html">B-2 rebranding regression</a>
   <a class="next" href="/testing/51-attack.html">A-1 51% attack</a>

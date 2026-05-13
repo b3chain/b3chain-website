@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; Security Roadmap</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  Security Roadmap
+</div>
+
+<header>
+  <h1>Security Roadmap</h1>
+  <p class="subtitle">
+    The Phase 11 self-audit checks what we shipped today. The Bitcoin
+    inheritance audit checks that we did not break what Bitcoin already
+    proved. This page is the forward-looking counterpart: the eight
+    things that should happen before, around, or after mainnet launch
+    to keep raising the security bar.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Source: <b>doc/SECURITY-ROADMAP.md</b></span>
+    <span class="pill">Last reviewed: <b>not yet</b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Status legend</h2>
+  <table>
+    <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge badge-skip">proposed</span></td>
+          <td>Discussed, not yet scheduled.</td></tr>
+      <tr><td><span class="badge badge-skip">in-progress</span></td>
+          <td>Work has started, not yet shipped.</td></tr>
+      <tr><td><span class="badge badge-pass">done</span></td>
+          <td>Shipped and verified.</td></tr>
+      <tr><td><span class="badge badge-fail">deferred</span></td>
+          <td>Explicitly out of scope this cycle, with a written reason.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>2. Roadmap items</h2>
+
+  <table>
+    <thead><tr>
+      <th>#</th><th>Item</th><th>Priority</th><th>Effort</th><th>Status</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td><a href="#item-1">OSS-Fuzz integration</a></td>
+        <td>High</td>
+        <td>2&ndash;4 wk</td>
+        <td><span class="badge badge-skip">proposed</span></td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td><a href="#item-2">Reproducible Guix builds</a></td>
+        <td>High</td>
+        <td>1&ndash;2 wk</td>
+        <td><span class="badge badge-skip">proposed</span></td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td><a href="#item-3">Continuous benchmark CI</a></td>
+        <td>Medium</td>
+        <td>1 wk</td>
+        <td><span class="badge badge-skip">in-progress</span></td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td><a href="#item-4">External cryptographic audit</a></td>
+        <td>Critical</td>
+        <td>4&ndash;8 wk</td>
+        <td><span class="badge badge-skip">proposed</span></td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td><a href="#item-5">Bug bounty programme</a></td>
+        <td>High</td>
+        <td>1 wk + ongoing</td>
+        <td><span class="badge badge-skip">proposed</span></td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td><a href="#item-6">Post-quantum signature experiment</a></td>
+        <td>Low</td>
+        <td>4&ndash;6 wk</td>
+        <td><span class="badge badge-skip">proposed</span></td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td><a href="#item-7">Mainnet checkpoint key ceremony</a></td>
+        <td>Medium</td>
+        <td>1 wk + ongoing</td>
+        <td><span class="badge badge-skip">proposed</span></td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td><a href="#item-8">Hardware-rooted miner integrity</a></td>
+        <td>Low</td>
+        <td>6&ndash;10 wk</td>
+        <td><span class="badge badge-skip">proposed</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="small">
+    Status pills update from
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/SECURITY-ROADMAP.md">
+    <code>doc/SECURITY-ROADMAP.md</code></a> on each release. If the
+    table here disagrees with the source doc, the doc wins.
+  </p>
+</section>
+
+<section id="item-1">
+  <h2>3. OSS-Fuzz integration <span class="badge badge-skip">proposed</span></h2>
+  <p><strong>Priority:</strong> High &nbsp;
+     <strong>Effort:</strong> 2&ndash;4 person-weeks</p>
+  <p>
+    Bitcoin Core ships 60+ libFuzzer harnesses under
+    <code>src/test/fuzz/</code> &mdash; B3Chain inherits all of them.
+    Two harnesses specifically belong to B3Chain:
+  </p>
+  <ul>
+    <li>BLAKE3 SIMD dispatcher: random-input differential test of
+        SIMD vs portable, fail on any mismatch (the
+        <code>audit-simd-blake3.py</code> assertion, running 24/7).</li>
+    <li>Any new consensus parser code introduced by the PoW swap.</li>
+  </ul>
+  <p>
+    <strong>Why it matters.</strong> OSS-Fuzz runs on Google's
+    infrastructure with thousands of CPU-hours. A reachable bug is
+    found in days rather than years.
+  </p>
+</section>
+
+<section id="item-2">
+  <h2>4. Reproducible Guix builds <span class="badge badge-skip">proposed</span></h2>
+  <p><strong>Priority:</strong> High &nbsp;
+     <strong>Effort:</strong> 1&ndash;2 person-weeks</p>
+  <p>
+    Bitcoin Core's Guix pipeline produces byte-identical binaries
+    on any machine. B3Chain inherits this. The B3Chain-specific
+    additions:
+  </p>
+  <ul>
+    <li>Pin the vendored BLAKE3 C library to a specific upstream SHA;
+        Guix manifest verifies it at build time.</li>
+    <li>Each release publishes binary SHA-256s; anyone can rebuild and
+        verify byte-for-byte.</li>
+  </ul>
+  <p>
+    <strong>Why it matters.</strong> Defends against compromise of any
+    single maintainer's build environment (CCleaner 2017, SolarWinds
+    2020).
+  </p>
+</section>
+
+<section id="item-3">
+  <h2>5. Continuous benchmark CI <span class="badge badge-skip">in-progress</span></h2>
+  <p><strong>Priority:</strong> Medium &nbsp;
+     <strong>Effort:</strong> 1 person-week (started)</p>
+  <p>
+    The throughput comparison
+    (<a href="/testing/compare/pow-throughput.html"><code>compare-pow-throughput</code></a>)
+    runs on every PR via
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/.github/workflows/compare-bench.yml">
+    <code>.github/workflows/compare-bench.yml</code></a> and fails if
+    BLAKE3d throughput regresses by more than 10% versus the pinned
+    baseline.
+  </p>
+  <p>Future work:</p>
+  <ul>
+    <li>Wire up block-validation benchmark on a nightly cadence.</li>
+    <li>Result-over-time chart on this site.</li>
+    <li>Add a physical power meter to the runner for an energy
+        regression curve.</li>
+  </ul>
+</section>
+
+<section id="item-4">
+  <h2>6. External cryptographic audit <span class="badge badge-skip">proposed</span></h2>
+  <p><strong>Priority:</strong> Critical (blocks mainnet launch) &nbsp;
+     <strong>Effort:</strong> 4&ndash;8 wk audit firm + 2 wk internal &nbsp;
+     <strong>Cost:</strong> $40K&ndash;$120K USD</p>
+  <p>
+    Engage a reputable cryptography firm (Trail of Bits, NCC Group,
+    Cure53, Quarkslab, Least Authority) for a focused review of:
+  </p>
+  <ul>
+    <li>BLAKE3 PoW integration: every diff that touches
+        <code>pow.cpp</code>, <code>validation.cpp</code> PoW paths,
+        <code>chainparams.cpp</code>, <code>crypto/blake3/</code>.</li>
+    <li>Address format changes
+        (<code>key_io.cpp</code>, base58/bech32 wiring).</li>
+    <li>HD wallet <code>coin_type</code> swap.</li>
+  </ul>
+  <p>
+    The firm is <strong>not</strong> asked to re-audit Bitcoin Core
+    itself &mdash; that is Bitcoin's reviewers' job.
+  </p>
+  <p>
+    <strong>Deliverable.</strong> Public audit report hosted on
+    <code>b3chain.org</code>, with all findings and remediations
+    linked.
+  </p>
+</section>
+
+<section id="item-5">
+  <h2>7. Bug bounty programme <span class="badge badge-skip">proposed</span></h2>
+  <p><strong>Priority:</strong> High (post-launch) &nbsp;
+     <strong>Effort:</strong> 1 wk setup + ongoing triage &nbsp;
+     <strong>Cost:</strong> tiered ($250&ndash;$50K per finding)</p>
+  <table>
+    <thead><tr><th>Severity</th><th>Component</th><th class="num">Payout (USD)</th></tr></thead>
+    <tbody>
+      <tr><td>Critical</td><td>Consensus</td><td class="num">$50 000</td></tr>
+      <tr><td>High</td><td>Wallet</td><td class="num">$20 000</td></tr>
+      <tr><td>High</td><td>RPC / P2P</td><td class="num">$15 000</td></tr>
+      <tr><td>Medium</td><td>Website / docs leak credentials</td><td class="num">$1 000</td></tr>
+      <tr><td>Low</td><td>Reachable but non-exploitable</td><td class="num">$250</td></tr>
+    </tbody>
+  </table>
+  <p>
+    Hosted on Immunefi, HackerOne, or self-hosted with a published
+    scope and disclosure policy.
+  </p>
+</section>
+
+<section id="item-6">
+  <h2>8. Post-quantum signature experiment <span class="badge badge-skip">proposed</span></h2>
+  <p><strong>Priority:</strong> Low (nothing breaks if deferred) &nbsp;
+     <strong>Effort:</strong> 4&ndash;6 person-weeks</p>
+  <p>
+    Add a separate, <em>non-activated</em> transaction version that
+    uses Falcon-512 or Dilithium-2 alongside ECDSA. Measure:
+  </p>
+  <ul>
+    <li>Transaction size (PQC sigs are 1&ndash;4 KB vs ECDSA's 71 bytes).</li>
+    <li>Verification CPU cost.</li>
+    <li>UTXO set growth.</li>
+    <li>Mempool behaviour with full PQC-tx workloads.</li>
+  </ul>
+  <p>
+    <strong>Measurement only.</strong> No consensus change. Data
+    informs a future decision about whether/when/how to deploy
+    PQC-protected outputs.
+  </p>
+  <p>
+    <strong>Why it matters.</strong> When (not if) capable quantum
+    hardware appears, ECDSA preimages can be recovered from public
+    keys exposed by spent outputs. Bitcoin and forks share this
+    exposure. Doing the measurement now means we are not surprised
+    later.
+  </p>
+</section>
+
+<section id="item-7">
+  <h2>9. Mainnet checkpoint key ceremony <span class="badge badge-skip">proposed</span></h2>
+  <p><strong>Priority:</strong> Medium (else <code>deferred</code>) &nbsp;
+     <strong>Effort:</strong> 1 wk ceremony + per-checkpoint ongoing</p>
+  <p>If the project decides to ship maintainer-signed checkpoints:</p>
+  <ul>
+    <li>Multi-party, M-of-N (e.g. 3-of-5 maintainer keys).</li>
+    <li>In-person ceremony with attendees, video, and post-ceremony
+        attestation hashes.</li>
+    <li>Geographically-distributed hardware wallets, scheduled key
+        rotation.</li>
+    <li>Published checkpoint-publication policy: when, by whom, under
+        what process.</li>
+  </ul>
+  <p>
+    <strong>Status note.</strong> Deferred unless and until 51% attack
+    probability becomes a real operational concern. Documented here so
+    we have the procedure ready if needed.
+  </p>
+</section>
+
+<section id="item-8">
+  <h2>10. Hardware-rooted miner integrity <span class="badge badge-skip">proposed</span></h2>
+  <p><strong>Priority:</strong> Low (research-grade) &nbsp;
+     <strong>Effort:</strong> 6&ndash;10 person-weeks</p>
+  <p>
+    Mining pools today have no clean way to verify that a connected
+    miner runs the agreed-upon software. A TPM-based attestation
+    could let a pool require a signed unmodified miner binary, enforce
+    version policy, and bind suspicious behaviour to a hardware
+    identity rather than just an IP.
+  </p>
+  <p>
+    Research-grade &mdash; no industry deployment we can copy. Listed
+    as a long-term direction, not a launch blocker.
+  </p>
+</section>
+
+<section>
+  <h2>11. How this list evolves</h2>
+  <ol>
+    <li>New items are opened as a GitHub issue with the
+        <code>roadmap-proposal</code> label, then merged into the source
+        document at the next maintainers' review.</li>
+    <li>Items move through <code>proposed</code> &rarr;
+        <code>in-progress</code> &rarr; <code>done</code> with a brief
+        note in the row.</li>
+    <li>Items can move to <code>deferred</code> with a written reason;
+        never silently removed.</li>
+    <li>This page regenerates from the source doc on each release.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>12. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/SECURITY-ROADMAP.md">
+        <code>doc/SECURITY-ROADMAP.md</code></a> &mdash; the master roadmap document</li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/SECURITY-AUDIT.md">
+        <code>doc/SECURITY-AUDIT.md</code></a> &mdash; the Phase 11 self-audit master checklist</li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/SECURITY-INHERITANCE.md">
+        <code>doc/SECURITY-INHERITANCE.md</code></a> &mdash; the Bitcoin inheritance inventory</li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/bitcoin-inheritance.html">Bitcoin inheritance</a>
+  <a class="next" href="/testing.html">Testing hub</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

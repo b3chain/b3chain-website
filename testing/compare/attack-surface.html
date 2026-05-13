@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; attack surface comparison</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  <a href="/testing/compare.html">BLAKE3 vs SHA-256</a> /
+  Attack surface
+</div>
+
+<header>
+  <h1>Attack surface &mdash; SHA-256 vs BLAKE3</h1>
+  <p class="subtitle">
+    What known cryptanalytic attacks exist against each algorithm, what
+    margin remains, and what construction-level safety properties each
+    algorithm exposes (or doesn't).
+  </p>
+  <div class="tagrow">
+    <span class="pill">Source: <b>compare-attack-surface.md</b></span>
+    <span class="pill">Type: <b>structural / data-only</b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Cryptanalysis status (full algorithm)</h2>
+  <table>
+    <thead>
+      <tr><th>Attack</th><th>SHA-256</th><th>BLAKE3</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Collision (full rounds)</td><td>none, target 2<sup>128</sup></td><td>none, target 2<sup>128</sup></td></tr>
+      <tr><td>Preimage (full rounds)</td><td>none, target 2<sup>256</sup></td><td>none, target 2<sup>256</sup></td></tr>
+      <tr><td>Length extension</td><td>trivial (MD construction)</td><td>n/a (immune by design)</td></tr>
+      <tr><td>Multi-collision</td><td>Joux 2004 applies</td><td>resistant (tree mode)</td></tr>
+      <tr><td>Multi-target preimage</td><td>amortisable (Grover &times; #targets)</td><td>resistant (key as IV)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>2. Round-reduced cryptanalysis</h2>
+  <table>
+    <thead>
+      <tr><th>Property</th><th>SHA-256</th><th>BLAKE3</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Compression rounds</td><td>64</td><td>7 (BLAKE2 round, modified)</td></tr>
+      <tr><td>Best collision</td><td>31/64 rounds (theoretical, &gt; 2<sup>180</sup>)</td><td>7/10 rounds on BLAKE2 (&gt; 2<sup>160</sup>)</td></tr>
+      <tr><td>Best preimage</td><td>52/64 rounds</td><td>2.5/7 rounds</td></tr>
+      <tr><td>Headroom (rounds attacked / total)</td><td>~48%</td><td>~36%</td></tr>
+    </tbody>
+  </table>
+  <p>
+    BLAKE3's narrower round headroom (7 used vs ~10 attacked on BLAKE2)
+    reflects a deliberate trade for speed. The BLAKE3 designers argue
+    this is acceptable because the security target is 128-bit collision
+    / 256-bit preimage, both still uncomfortably far from any attack.
+  </p>
+</section>
+
+<section>
+  <h2>3. Construction-level safety</h2>
+  <table>
+    <thead>
+      <tr><th>Property</th><th>SHA-256 (Merkle-Damg&aring;rd)</th><th>BLAKE3 (Bao tree)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Length-extension resistant by default</td><td>NO</td><td>YES</td></tr>
+      <tr><td>Multi-target resistant</td><td>NO</td><td>YES</td></tr>
+      <tr><td>Domain-separated keyed mode</td><td>NO (need HMAC)</td><td>YES (built-in)</td></tr>
+      <tr><td>Domain-separated KDF mode</td><td>NO (need HKDF)</td><td>YES (built-in)</td></tr>
+      <tr><td>Tree-hashable for parallelism</td><td>NO</td><td>YES</td></tr>
+      <tr><td>Designed for SIMD</td><td>NO (after-the-fact)</td><td>YES</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>4. CVE history</h2>
+  <ul>
+    <li><b>SHA-256 the algorithm</b>: zero CVEs.</li>
+    <li><b>SHA-256 implementations</b>: implementation CVEs in OpenSSL
+        / NSS / nettle exist but are buffer-handling bugs, not algorithm
+        flaws.</li>
+    <li><b>BLAKE3 the algorithm</b>: zero CVEs.</li>
+    <li><b>BLAKE3 implementations</b>: <strong>CVE-2023-28447</strong>
+        in the official Rust crate &mdash; AVX-512 SIMD path buffer
+        handling, fixed in v1.4.1. Also caught by static analysis;
+        no exploit reported in the wild.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>5. Quantum considerations</h2>
+  <ul>
+    <li>Both algorithms have the same Grover bound: 256-bit preimage
+        becomes ~128 effective bits.</li>
+    <li>Quantum collision attacks (BHT) cannot do better than ~2<sup>85
+        </sup> work for either algorithm; collision security target
+        (2<sup>128</sup> classical / 2<sup>85</sup> quantum) is well
+        above any practical concern.</li>
+    <li>Neither algorithm is broken by Shor's algorithm (which targets
+        factoring / discrete log, not hashes).</li>
+  </ul>
+</section>
+
+<section>
+  <h2>6. Side channels</h2>
+  <ul>
+    <li>Both algorithms are constant-time in standard implementations.</li>
+    <li>SHA-256 has been deployed for two decades with no published
+        timing or power side-channel attack on a standard
+        implementation.</li>
+    <li>BLAKE3 is similar: the reference C library is straight-line
+        code; SIMD implementations are constant-time for the same
+        reasons. The Rust crate has had one buffer-handling CVE (above)
+        but no side-channel CVE.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>7. Bottom line</h2>
+  <p>
+    Both algorithms are unbroken at the full-round level. The argument
+    for BLAKE3 over SHA-256 is <strong>not</strong> "BLAKE3 has fewer
+    rounds and is therefore weaker" &mdash; that is technically true but
+    BLAKE3 was designed for that round count. The argument is
+    <strong>construction-level safety</strong>: BLAKE3 exposes fewer
+    misuse footguns (no length extension, built-in keyed mode, built-in
+    KDF, built-in tree parallelism). This is the property that matters
+    when designing future protocol layers on top of the hash.
+  </p>
+</section>
+
+<section>
+  <h2>8. Sources</h2>
+  <p>
+    IACR cryptodb SHA-2 entries, BLAKE3 paper (O'Connor et al. 2020),
+    BLAKE2 cryptanalysis (Khovratovich, Nikolic 2012), NIST SHA-3
+    selection rationale, CVE-2023-28447. Full citations in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/compare/compare-attack-surface.md">
+    <code>compare-attack-surface.md</code></a>.
+  </p>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/compare/energy.html">&larr; Energy per hash</a>
+  <a class="next" href="/testing/compare/collision-margin.html">Collision margin &rarr;</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

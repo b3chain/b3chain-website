@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; energy comparison</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  <a href="/testing/compare.html">BLAKE3 vs SHA-256</a> /
+  Energy per hash
+</div>
+
+<header>
+  <h1>Energy per hash &mdash; SHA-256 vs BLAKE3</h1>
+  <p class="subtitle">
+    Joules per hash for each algorithm on different hardware classes,
+    with the necessary caveats about why this is <strong>not</strong> the
+    same as "PoW network energy".
+  </p>
+  <div class="tagrow">
+    <span class="pill">Source: <b>compare-energy.md</b></span>
+    <span class="pill">Type: <b>data-only</b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Two completely different numbers</h2>
+  <p>
+    Two things travel under the same name and are constantly confused:
+  </p>
+  <ol>
+    <li><b>Algorithm energy</b> &mdash; joules to compute one hash on
+        hardware optimised for that algorithm. This is what the BLAKE3
+        paper measures.</li>
+    <li><b>Network energy</b> &mdash; total grid energy a chain spends
+        per second on PoW. This depends almost entirely on coin price
+        and electricity cost, <em>not</em> the algorithm. Bitcoin and a
+        hypothetical identical-difficulty BLAKE3 chain would consume
+        roughly the same network energy at the same reward level.</li>
+  </ol>
+  <p>
+    This page is about (1). For (2) see Cambridge Bitcoin Electricity
+    Consumption Index. B3Chain's mainnet network energy is unknowable
+    until launch.
+  </p>
+</section>
+
+<section>
+  <h2>2. Algorithm energy (published numbers)</h2>
+  <table>
+    <thead>
+      <tr><th>Algorithm</th><th>Hardware</th><th>Throughput</th><th>J/hash (est.)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>SHA-256</td><td>Antminer S21 XP Hyd (ASIC)</td><td>~473 TH/s</td><td>~6.4&times;10<sup>-15</sup></td></tr>
+      <tr><td>SHA-256</td><td>x86 single core (AVX2)</td><td>~140 MH/s</td><td>~5.0&times;10<sup>-9</sup></td></tr>
+      <tr><td>BLAKE3</td><td>x86 single core (AVX-512)</td><td>~1.0 GH/s</td><td>~6.5&times;10<sup>-10</sup></td></tr>
+      <tr><td>BLAKE3</td><td>NVIDIA RTX 4090</td><td>~120 GH/s</td><td>~2.7&times;10<sup>-12</sup></td></tr>
+      <tr><td>BLAKE3 (no SIMD)</td><td>x86 single core</td><td>~250 MH/s</td><td>~2.6&times;10<sup>-9</sup></td></tr>
+    </tbody>
+  </table>
+  <p>
+    Headline: on the same general-purpose CPU, BLAKE3 is roughly an
+    order of magnitude lower J/hash than SHA-256, primarily because of
+    SIMD parallelism. On dedicated ASIC, the comparison flips because
+    SHA-256 ASICs are highly tuned and BLAKE3 ASICs effectively don't
+    exist.
+  </p>
+</section>
+
+<section>
+  <h2>3. What this means for B3Chain</h2>
+  <ul>
+    <li><b>Year one</b>: B3Chain mined on commodity CPUs/GPUs is more
+        energy-efficient per hash than Bitcoin mined on commodity CPUs/
+        GPUs. The total network energy is still set by the difficulty
+        curve and the value of B3C, not by the algorithm.</li>
+    <li><b>Eventually</b>: as BLAKE3 ASICs appear, this efficiency gap
+        closes. At steady state both chains converge to roughly the same
+        energy-per-USD spent on hashing, regardless of algorithm.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>4. What we explicitly do NOT claim</h2>
+  <ul>
+    <li>"BLAKE3 is greener than SHA-256 PoW." False at the network level.</li>
+    <li>"B3Chain will use less energy than Bitcoin." Unknown; depends on
+        B3C market value.</li>
+    <li>"BLAKE3 is more efficient." True only when comparing equivalent
+        hardware tiers.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>5. Methodology and caveats</h2>
+  <ul>
+    <li>ASIC J/hash is taken from manufacturer J/TH spec divided by
+        10<sup>12</sup>. Cooling overhead is not included (typically
+        +5&ndash;15%).</li>
+    <li>CPU J/hash assumes the chip's TDP is fully spent on the hashing
+        thread. Actual energy is somewhat lower because adjacent cores
+        are idle.</li>
+    <li>We have not run our own physical-power measurement. The
+        roadmap's "continuous benchmark CI" item includes wiring up an
+        actual power meter to a benchmark machine.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>6. Sources</h2>
+  <p>
+    BLAKE3 paper (O'Connor et al. 2020); OpenSSL <code>speed sha256</code>
+    benchmarks; Bitmain Antminer S21 XP Hyd spec; Bzminer release notes
+    for RTX 4090 throughput; Cambridge CBECI for context. Full citations
+    in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/compare/compare-energy.md">
+    <code>compare-energy.md</code></a>.
+  </p>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/compare/asic-landscape.html">&larr; ASIC landscape</a>
+  <a class="next" href="/testing/compare/attack-surface.html">Attack surface &rarr;</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

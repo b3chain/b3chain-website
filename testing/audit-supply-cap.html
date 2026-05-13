@@ -141,6 +141,54 @@ AUDIT RESULT: PASS  [C-1..C-4]</pre>
   </ul>
 </section>
 
+<!-- TUTORIAL -->
+<section class="tutorial">
+<h3>The problem in one sentence</h3>
+<p>Once a chain emits more than its declared supply, you cannot un-issue the excess; this is the single most reputation-defining bug a fork can ship.</p>
+<h3>The theory</h3>
+<p>Bitcoin's supply formula is a geometric series:</p>
+<p>\[ S = I \cdot \sum_{n=0}^{63} \lfloor (50 \cdot 10^8) / 2^n \rfloor \]</p>
+<p>where <code>I</code> is the halving interval (<code>210000</code> blocks on mainnet) and the sum is truncated at <code>n = 63</code> because the C++ expression <code>(50 * COIN) &gt;&gt; 64</code> on a 64-bit type is <strong>undefined behaviour</strong>. The guard <code>if (halvings &gt;= 64) return 0;</code> is not optional; it changes the answer on most compilers.</p>
+<p>For B3Chain, all parameters are inherited unchanged. The cap evaluates to <code>2099999997690000</code> satoshi exactly = <code>20999999.97690000 B3C</code>.</p>
+<h3>Hands-on demo</h3>
+<pre>python3 contrib/testing/audit/audit-supply-cap.py</pre>
+<p>Expected output:</p>
+<pre>[C-1..C-4] Supply cap and halving schedule
+========================================================================
+  PASS  [C-2] geometric sum at mainnet interval (210000) equals 20999999.97690000
+  PASS  [C-3] subsidy returns 0 at halving 64
+  PASS  [C-4] CalculateNextWorkRequired retains the 4x retarget bounds
+  Spawning regtest node and mining 600 blocks (4 halvings)...
+  PASS  [C-1] subsidy at height 1 (halving 0) = 50.00000000 B3C
+  PASS  [C-1] subsidy at height 151 (halving 1) = 25.00000000 B3C
+  ...
+AUDIT RESULT: PASS  [C-1..C-4]</pre>
+<h3>Exercise</h3>
+<p>Open <code>src/validation.cpp</code> and locate <code>GetBlockSubsidy()</code>. Remove the <code>&gt;= 64</code> guard, rebuild, re-run the audit. You should see C-3 fail with a non-zero subsidy at high heights.</p>
+<pre>// Before
+if (halvings &gt;= 64) return 0;
+// After (introduces UB)
+// (deleted)</pre>
+<p>Expected new output (compiler-dependent — gcc tends to wrap, clang often optimises to <code>0</code> anyway):</p>
+<pre>  FAIL  [C-3] subsidy at halving 64 returned 50.00000000 B3C, expected 0
+AUDIT RESULT: FAIL  [C-1..C-4]</pre>
+<p>This is exactly the kind of "looks like it works in your tests" bug that has bitten other forks. The audit catches it.</p>
+<h3>Further reading</h3>
+<ul>
+  <li>Bitcoin Core PR for the original guard:</li>
+</ul>
+<p>  github.com/bitcoin/bitcoin/blob/master/src/validation.cpp</p>
+<ul>
+  <li>Bitcoin Talk thread on the geometric-series cap (Satoshi 2010):</li>
+</ul>
+<p>  bitcointalk.org/index.php?topic=583.0</p>
+<ul>
+  <li>C++ standard on undefined right-shift (ISO/IEC 14882:2017 §8.7):</li>
+</ul>
+<p>  open-std.org/jtc1/sc22/wg21/</p>
+</section>
+<!-- /TUTORIAL -->
+
 <div class="page-nav">
   <a class="prev" href="/testing/security-audit.html">Phase 11 hub</a>
   <a class="next" href="/testing/audit-pow-isolation.html">H-1 PoW isolation</a>

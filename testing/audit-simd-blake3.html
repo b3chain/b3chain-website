@@ -146,6 +146,63 @@ AUDIT RESULT: PASS  [B-1]</pre>
   </ul>
 </section>
 
+<!-- TUTORIAL -->
+<section class="tutorial">
+<h3>The problem in one sentence</h3>
+<p>SIMD code paths and portable C code paths for the same algorithm must produce <strong>byte-identical</strong> output, and a single off-by-one in lane loading silently corrupts the chain forever.</p>
+<h3>The theory</h3>
+<p>The official BLAKE3 C library has multiple compression-loop implementations:</p>
+<ul>
+  <li>Portable C (always built; reference behaviour)</li>
+  <li>SSE2 (Intel/AMD baseline x86_64, 4 lanes)</li>
+  <li>SSE4.1 (4 lanes, faster)</li>
+  <li>AVX2 (8 lanes)</li>
+  <li>AVX-512 (16 lanes)</li>
+  <li>NEON (ARM)</li>
+</ul>
+<p>A runtime dispatcher picks the best implementation for the host CPU. If any of these has a bug — a lane swap, a misaligned load, a missing final round — <em>some</em> nodes will produce different hashes, and the network will fork along CPU type. This has happened in real chains (notably an Ethereum SECP256K1 SIMD bug in 2017 that nearly forked the network).</p>
+<h3>Hands-on demo</h3>
+<pre>python3 contrib/testing/audit/audit-simd-blake3.py</pre>
+<p>The script:</p>
+<ol>
+  <li>Picks a list of edge-case input sizes: 0, 1, 31, 32, 33, 63, 64, 65,</li>
+</ol>
+<p>   80 (block-header), 127, 128, 129, 255, 256, 257, 1023, 1024, 1025,    4096, 8192, 65535, 65536, 100000.</p>
+<ol>
+  <li>Generates 1000 additional random-sized inputs from a fixed seed</li>
+</ol>
+<p>   (so the run is reproducible).</p>
+<ol>
+  <li>Hashes every input with BLAKE3 in:</li>
+</ol>
+<ul>
+  <li>default mode (whatever SIMD the dispatcher picks)</li>
+  <li><code>BLAKE3_NO_SIMD=1</code> portable mode</li>
+</ul>
+<ol>
+  <li>Compares byte-for-byte. Any mismatch is an immediate FAIL.</li>
+</ol>
+<h3>Exercise</h3>
+<p>This one needs you to break the BLAKE3 C library, which lives under <code>src/crypto/blake3/c/</code>. As a non-destructive demonstration, you can <em>temporarily</em> set the env var that disables SIMD and confirm the audit still passes (because it's comparing portable to portable):</p>
+<pre>BLAKE3_NO_SIMD=1 python3 contrib/testing/audit/audit-simd-blake3.py
+# Should still PASS — both sides are now portable.</pre>
+<p>To actually demonstrate a SIMD bug detection, the more realistic exercise is: build with <code>-DBLAKE3_DEBUG_FORCE_SIMD_OUTPUT_MISMATCH</code> (if the library is patched to support it) and observe the differential fail. In production, this exercise is what catches real upstream regressions when we sync the BLAKE3 library to a newer upstream release.</p>
+<h3>Why we re-test on every release</h3>
+<p>The BLAKE3 C library is vendored at a specific commit. Every time we bump that commit, we re-run this audit <em>before</em> tagging a release. A SIMD regression upstream (rare but real — see CVE-2023-28447 for a historical example) must be caught by us, not by the network.</p>
+<h3>Further reading</h3>
+<ul>
+  <li>BLAKE3 specification: github.com/BLAKE3-team/BLAKE3-specs</li>
+  <li>BLAKE3 C library: github.com/BLAKE3-team/BLAKE3/tree/master/c</li>
+  <li>CVE-2023-28447 — historical AVX-512 buffer-handling bug, fixed in</li>
+</ul>
+<p>  BLAKE3 v1.4.1.</p>
+<ul>
+  <li>Ethereum 2017 SECP256K1 fork-near-miss writeup:</li>
+</ul>
+<p>  ethereum.org/en/history/</p>
+</section>
+<!-- /TUTORIAL -->
+
 <div class="page-nav">
   <a class="prev" href="/testing/audit-address-rejection.html">W-1 address rejection</a>
   <a class="next" href="/testing/audit-rebranding.html">B-2 rebranding regression</a>

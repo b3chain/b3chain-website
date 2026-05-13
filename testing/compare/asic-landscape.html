@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; ASIC landscape</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  <a href="/testing/compare.html">BLAKE3 vs SHA-256</a> /
+  ASIC landscape
+</div>
+
+<header>
+  <h1>ASIC landscape &mdash; SHA-256 vs BLAKE3</h1>
+  <p class="subtitle">
+    Bitcoin's mature SHA-256 ASIC market vs BLAKE3's nascent ecosystem,
+    and what this asymmetry means for B3Chain's launch-time security
+    distribution.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Source: <b>compare-asic-landscape.md</b></span>
+    <span class="pill">Type: <b>data-only</b></span>
+    <span class="pill">Last updated: <b>2026-05</b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Why this comparison matters</h2>
+  <p>
+    A new chain's biggest day-one risk is concentration. If most of the
+    initial hashpower can be supplied by a small number of large mining
+    operators, the cost-of-attack is whatever they charge to rent it.
+    Bitcoin's SHA-256 has 15+ years of specialised hardware development;
+    BLAKE3 has effectively none. That asymmetry is the single biggest
+    reason B3Chain is launching on a different PoW.
+  </p>
+</section>
+
+<section>
+  <h2>2. SHA-256 ASIC market (mid-2026)</h2>
+  <table>
+    <thead>
+      <tr><th>Manufacturer</th><th>Flagship</th><th>Hash rate</th><th>J/TH</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Bitmain</td><td>Antminer S21 XP Hyd</td><td>~473 TH/s</td><td>~13.5</td></tr>
+      <tr><td>MicroBT</td><td>WhatsMiner M66S</td><td>~298 TH/s</td><td>~18.5</td></tr>
+      <tr><td>Canaan</td><td>Avalon A14 Pro</td><td>~250 TH/s</td><td>~22.5</td></tr>
+      <tr><td>Bitdeer Tech</td><td>SealMiner A2</td><td>~226 TH/s</td><td>~16.0</td></tr>
+      <tr><td>Auradine</td><td>AT2880 (water)</td><td>~600 TH/s</td><td>~14.5</td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Total Bitcoin network: ~700+ EH/s as of writing. Top 5 pools control
+    over 75% of hashpower. Public miners alone hold ~30% of the network
+    in capital terms.
+  </p>
+</section>
+
+<section>
+  <h2>3. BLAKE3 ASIC market</h2>
+  <p>
+    There is no public BLAKE3 ASIC product as of writing. The reasons:
+  </p>
+  <ul>
+    <li>BLAKE3 was published Jan 2020. The first PoW chain to adopt it
+        (Alephium) launched late 2021. The economic incentive to design
+        a BLAKE3 ASIC has existed for &lt;5 years vs ~16 for SHA-256.</li>
+    <li>BLAKE3 already exposes much of its parallelism through SIMD,
+        which top-end consumer GPUs and CPUs already exploit. The ASIC
+        speed-up over commodity hardware is therefore smaller in
+        absolute terms than SHA-256's ASIC-vs-CPU gap.</li>
+    <li>A handful of GPU miners (Bzminer, GMiner, lolMiner) support
+        BLAKE3-family algorithms. Estimated capex to reach 100 GH/s on
+        commodity GPUs is roughly $100K.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>4. What this means for B3Chain</h2>
+  <ul>
+    <li><b>Year one</b>: cost-of-attack is bounded by the CPU/GPU rental
+        market (EC2, Vast.ai, Akash). This is much more diffuse than the
+        SHA-256 ASIC market and harder to corner.</li>
+    <li><b>Eventually</b>: as B3Chain accumulates economic value, BLAKE3
+        ASICs will follow. We make no claim that BLAKE3 is permanently
+        ASIC-resistant; no algorithm is.</li>
+    <li><b>Counterweight</b>: SHA-256's enormous ASIC market is also why
+        Bitcoin's PoW is so secure today. BLAKE3 trades immediate ASIC
+        scale for initial decentralisation. These are different security
+        properties at different time horizons.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>5. What this comparison is NOT</h2>
+  <ul>
+    <li>Not a claim that BLAKE3 is ASIC-resistant. It is not, in any
+        meaningful long-term sense.</li>
+    <li>Not a claim that BLAKE3 PoW is more secure than SHA-256 PoW. SHA-
+        256 PoW is enormously secure precisely because of the mature
+        market.</li>
+    <li>Not a claim that B3Chain is "more decentralised forever". The
+        decentralisation advantage is initial-conditions; it erodes as
+        the market matures.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>6. Update protocol</h2>
+  <p>
+    The full text in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/compare/compare-asic-landscape.md">
+    <code>compare-asic-landscape.md</code></a>
+    lists the trigger events that cause us to re-evaluate this analysis:
+  </p>
+  <ol>
+    <li>A public BLAKE3 ASIC product announcement.</li>
+    <li>Any single miner's BLAKE3 hashrate exceeding 1 PH/s.</li>
+    <li>The first BLAKE3 mining pool controlling &gt;25% of any major
+        BLAKE3 chain.</li>
+  </ol>
+  <p>
+    Any of these triggers a reassessment of B3Chain's launch-time
+    security margin and may motivate the checkpoint ceremony described
+    in the <a href="/testing/roadmap.html">roadmap</a>.
+  </p>
+</section>
+
+<section>
+  <h2>7. Sources</h2>
+  <p>
+    See the full Markdown document for citations: Bitmain, MicroBT,
+    Canaan, Bitdeer, and Auradine product pages; blockchain.info hashrate
+    chart; Alephium official documentation; the BLAKE3 paper.
+  </p>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/compare/length-extension.html">&larr; Length extension</a>
+  <a class="next" href="/testing/compare/energy.html">Energy per hash &rarr;</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

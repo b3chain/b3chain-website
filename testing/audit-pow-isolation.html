@@ -149,6 +149,62 @@ AUDIT RESULT: PASS  [H-1]</pre>
   </ul>
 </section>
 
+<!-- TUTORIAL -->
+<section class="tutorial">
+<h3>The problem in one sentence</h3>
+<p>B3Chain uses <strong>two different hash functions</strong> for two purposes — SHA-256d for block IDs (so external tools and explorers stay compatible) and BLAKE3d for the proof-of-work check — and confusing them is a catastrophic, silent failure.</p>
+<h3>The theory</h3>
+<p>Every block has two hashes:</p>
+<pre>GetHash()    -&gt; SHA-256d(serialized header)    # used as block id, txid lookup, merkle leaf
+GetPoWHash() -&gt; BLAKE3d(serialized header)     # used by ContextualCheckProofOfWork</pre>
+<p>A miner's job is to find a header with <code>GetPoWHash() &lt;= target</code>. The network's job is to verify that property. If <code>ContextualCheckProofOfWork</code> ever calls <code>GetHash()</code> instead of <code>GetPoWHash()</code>:</p>
+<ul>
+  <li>Block IDs are usually well below the target (because SHA-256 outputs</li>
+</ul>
+<p>  are uniform 32-byte numbers, just like BLAKE3 outputs).</p>
+<ul>
+  <li>So almost any block submitted to such a buggy node would pass PoW</li>
+</ul>
+<p>  validation — including blocks with no actual mining work behind them.</p>
+<ul>
+  <li>Result: the chain's PoW security collapses to "whatever the easiest</li>
+</ul>
+<p>  way to find a low SHA-256 hash is", which is effectively zero on   modern CPUs.</p>
+<h3>Hands-on demo</h3>
+<pre>python3 contrib/testing/audit/audit-pow-isolation.py</pre>
+<p>This audit does two things:</p>
+<ol>
+  <li><strong>Static grep</strong> over every <code>GetHash()</code> and <code>GetPoWHash()</code> call site in</li>
+</ol>
+<p>   <code>src/</code>, classifying each one as "PoW context" or "ID context" and    flagging mismatches.</p>
+<ol>
+  <li><strong>Functional test</strong>: constructs a header where SHA-256d ≤ target but</li>
+</ol>
+<p>   BLAKE3d &gt; target, submits it to a regtest node, expects rejection.    Then the inverse.</p>
+<h3>Exercise</h3>
+<p>In <code>src/validation.cpp</code>, locate <code>ContextualCheckProofOfWork</code> (or <code>CheckProofOfWork</code> depending on the call path). Replace the call to <code>GetPoWHash()</code> with <code>GetHash()</code>. Rebuild, re-run the audit:</p>
+<pre>// Before
+if (!CheckProofOfWork(block.GetPoWHash(), block.nBits, params)) ...
+// After (catastrophic)
+if (!CheckProofOfWork(block.GetHash(), block.nBits, params)) ...</pre>
+<p>Expected new output:</p>
+<pre>  FAIL  [H-1] static audit found PoW check using GetHash (line N of validation.cpp)
+  FAIL  [H-1] header with SHA256d-only PoW accepted by regtest node
+AUDIT RESULT: FAIL  [H-1]</pre>
+<h3>Why "looks fine in CI" doesn't help</h3>
+<p>Most unit tests work with regtest, where <code>nBits</code> is set very low and both hashes pass anyway. The bug only manifests in production once a real attacker notices it. That's exactly why this audit runs the contradiction check — a header that satisfies one hash function but not the other — rather than relying on "did the node accept the block?".</p>
+<h3>Further reading</h3>
+<ul>
+  <li>BIP-141 SegWit txid vs wtxid (similar dual-identity pattern):</li>
+</ul>
+<p>  github.com/bitcoin/bips/blob/master/bip-0141.mediawiki</p>
+<ul>
+  <li>The original BCH split confused some mining hardware about which</li>
+</ul>
+<p>  difficulty algorithm to use; this is the same class of bug at the   hash-function level.</p>
+</section>
+<!-- /TUTORIAL -->
+
 <div class="page-nav">
   <a class="prev" href="/testing/audit-supply-cap.html">C-1..C-4 supply cap</a>
   <a class="next" href="/testing/audit-network-isolation.html">N-1 network isolation</a>

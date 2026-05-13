@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; length-extension comparison</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  <a href="/testing/compare.html">BLAKE3 vs SHA-256</a> /
+  Length-extension safety
+</div>
+
+<header>
+  <h1>Length-extension &mdash; SHA-256 vulnerable, BLAKE3 immune</h1>
+  <p class="subtitle">
+    Working demonstration of the classic length-extension attack against
+    a naive <code>tag = H(secret || message)</code> MAC built on SHA-256.
+    The same attack against BLAKE3 fails by construction. This is about
+    construction-level safety, not a Bitcoin attack.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Script: <b>compare-length-extension.py</b></span>
+    <span class="pill">Output: <b>results/length-extension-*.json</b></span>
+    <span class="pill">Type: <b>educational demo</b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. The attack in 30 seconds</h2>
+  <p>
+    A length-extension attack lets an attacker who knows
+    <code>tag = SHA-256(secret || message)</code> and the byte-length of
+    <code>secret</code> compute <code>SHA-256(secret || message || pad ||
+    extra)</code> for any <code>extra</code> they choose &mdash; without
+    ever learning <code>secret</code>.
+  </p>
+  <p>
+    This works because Merkle-Damgard hashes (SHA-1, SHA-256, SHA-512)
+    expose their internal state in the output. The attacker treats the
+    public tag as the chaining value at position <code>len(secret) +
+    len(message) + len(pad)</code>, then continues hashing from there.
+  </p>
+</section>
+
+<section>
+  <h2>2. Why this is NOT a Bitcoin vulnerability</h2>
+  <p>
+    Bitcoin uses <strong>SHA-256d</strong> &mdash; <code>H(H(x))</code> &mdash;
+    not the <code>H(secret || x)</code> construction. The outer hash
+    absorbs exactly 32 bytes of input (the inner output), and an attacker
+    cannot extend the outer chaining value without first inverting the
+    inner SHA-256, which is itself a preimage attack. So Bitcoin's
+    block-id and txid hashing is safe.
+  </p>
+  <p>
+    The point of this demo is the underlying <em>construction</em>: a
+    naive user of SHA-256 (e.g. someone implementing a custom MAC for a
+    new protocol) can fall into the LE trap. A naive user of BLAKE3
+    cannot. Bitcoin Core has been bitten by this thinking error twice in
+    early proposals (BIP143 sighash design, original Lightning HTLC),
+    both caught in review before activation.
+  </p>
+</section>
+
+<section>
+  <h2>3. How to run</h2>
+<pre>cd b3chain
+pip3 install blake3
+python3 contrib/testing/compare/compare-length-extension.py</pre>
+</section>
+
+<section>
+  <h2>4. Sample output</h2>
+<pre>Length-extension demo: SHA-256 (vulnerable) vs BLAKE3 (immune)
+
+[1] SHA-256  H(secret || msg) MAC
+    secret length:  16 bytes (known to attacker, value secret)
+    message:        b'amount=100&amp;to=alice'
+    appended:       b'&amp;to=mallory&amp;override=true'
+    attack time:    97.5 us
+    forged tag:     82f688f4...8ae17ed5
+    verifier says:  ACCEPTED (forgery succeeded)
+
+[2] BLAKE3  H(secret || msg) MAC
+    attack time:    1.0 us
+    verifier says:  rejected (expected)
+
+| algorithm | attack succeeded? | time     |
+|-----------|-------------------|---------:|
+| sha256    | YES (forgery)     |  97.5 us |
+| blake3    | no                |   1.0 us |</pre>
+</section>
+
+<section>
+  <h2>5. The trick, step by step</h2>
+  <ol>
+    <li>The verifier computes <code>tag = SHA-256(secret || msg)</code>
+        with <code>secret = ab × 16</code> and
+        <code>msg = "amount=100&amp;to=alice"</code>.</li>
+    <li>The attacker does <em>not</em> know <code>secret</code> but knows
+        its length. They split the public <code>tag</code> back into the
+        eight 32-bit SHA-256 internal state words.</li>
+    <li>They compute <code>pad</code>, the SHA-256 padding that the
+        verifier appended to <code>secret || msg</code> to round it up to
+        a multiple of 64 bytes.</li>
+    <li>They feed <code>append</code> through SHA-256's compression
+        function, but starting from the recovered state and pretending
+        the previously absorbed length is
+        <code>len(secret) + len(msg) + len(pad)</code>.</li>
+    <li>They send the verifier <code>(msg || pad || append)</code> with
+        the new tag. The verifier independently computes
+        <code>SHA-256(secret || msg || pad || append)</code> and gets the
+        same tag, because that is exactly what the attacker computed.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>6. Why BLAKE3 is immune</h2>
+  <ul>
+    <li>BLAKE3 is a <strong>tree hash</strong>. The output is the root of
+        a Merkle tree over 1 KiB chunks, not a single chained chaining
+        value. There is no "internal state at position N" that the
+        attacker can resume from.</li>
+    <li>BLAKE3 has a built-in <strong>keyed mode</strong>
+        (<code>blake3.keyed_hash(key, msg)</code>) that uses the key as
+        an IV rather than a prefix. This is the construction you should
+        use for a MAC.</li>
+    <li>BLAKE3 has a built-in <strong>derive_key mode</strong> for KDFs,
+        avoiding the need for HKDF. Each mode has its own domain-
+        separation flag bits in the compression function.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>7. The right way to MAC with SHA-256</h2>
+  <p>
+    Use <strong>HMAC</strong>:
+  </p>
+<pre>import hmac, hashlib
+tag = hmac.new(secret, msg, hashlib.sha256).digest()</pre>
+  <p>
+    HMAC explicitly defends against LE by hashing twice with two distinct
+    keyed inputs (<code>ipad</code>, <code>opad</code>). Don't roll your
+    own; use the library.
+  </p>
+</section>
+
+<section>
+  <h2>8. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/compare/compare-length-extension.py">
+        contrib/testing/compare/compare-length-extension.py</a></li>
+    <li><a href="https://github.com/BLAKE3-team/BLAKE3-specs/blob/master/blake3.pdf">
+        BLAKE3 specification (paper)</a> &mdash; section on tree mode and
+        domain separation</li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/compare/block-validation.html">&larr; Block validation</a>
+  <a class="next" href="/testing/compare/asic-landscape.html">ASIC landscape &rarr;</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

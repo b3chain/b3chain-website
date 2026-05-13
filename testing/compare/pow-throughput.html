@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; PoW throughput comparison</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  <a href="/testing/compare.html">BLAKE3 vs SHA-256</a> /
+  Hash throughput
+</div>
+
+<header>
+  <h1>Hash throughput &mdash; SHA-256 vs BLAKE3</h1>
+  <p class="subtitle">
+    How many hashes per second each algorithm achieves on the host CPU,
+    single-threaded and N-threaded, with and without BLAKE3 SIMD lanes.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Script: <b>compare-pow-throughput.py</b></span>
+    <span class="pill">Output: <b>results/pow-throughput-*.json</b></span>
+    <span class="pill">Type: <b>microbenchmark</b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. What is measured</h2>
+  <p>
+    Each algorithm hashes a fixed 80-byte input (Bitcoin block-header
+    size) in a tight loop for N seconds. The script records:
+  </p>
+  <ul>
+    <li><code>hashes_per_sec</code></li>
+    <li><code>ns_per_hash</code></li>
+    <li>thread count and host CPU model (for reproducibility)</li>
+    <li>speedup factor versus the SHA-256d reference</li>
+  </ul>
+</section>
+
+<section>
+  <h2>2. How to run</h2>
+<pre>cd b3chain
+pip3 install blake3
+python3 contrib/testing/compare/compare-pow-throughput.py
+
+# customise
+python3 contrib/testing/compare/compare-pow-throughput.py \
+    --duration 5 \
+    --threads 1,4,8
+
+# omit the BLAKE3-portable (no-SIMD) measurement
+python3 contrib/testing/compare/compare-pow-throughput.py --no-portable</pre>
+</section>
+
+<section>
+  <h2>3. Sample output</h2>
+<pre>Measuring hash throughput (input=80B, duration=3.0s)
+
+  sha256     threads=1  ->     12,450,000 h/s (   80.3 ns/hash)
+  sha256d    threads=1  ->      6,210,000 h/s (  161.0 ns/hash)
+  blake3     threads=1  ->      9,800,000 h/s (  102.0 ns/hash)
+  blake3d    threads=1  ->      5,180,000 h/s (  193.1 ns/hash)
+  sha256     threads=8  ->     91,600,000 h/s (   10.9 ns/hash)
+  blake3     threads=8  ->     74,300,000 h/s (   13.5 ns/hash)
+  [no-simd] blake3 threads=8 ->     19,400,000 h/s (   51.5 ns/hash)
+
+| algorithm | threads | MH/s | ns/hash | vs sha256d (1T) |
+|-----------|--------:|-----:|--------:|----------------:|
+| sha256    |       1 |12.45 |    80.3 |           2.00x |
+| sha256d   |       1 | 6.21 |   161.0 |           1.00x |
+| blake3    |       1 | 9.80 |   102.0 |           1.58x |
+| blake3d   |       1 | 5.18 |   193.1 |           0.83x |</pre>
+</section>
+
+<section>
+  <h2>4. Interpreting the numbers</h2>
+  <ul>
+    <li><b>Single-thread, small inputs</b>: BLAKE3's tree advantage is
+        not visible. Both algorithms are dominated by per-call overhead
+        (Python FFI, instruction startup) at this scale. The SHA-256
+        result is sometimes faster here because Python's
+        <code>hashlib.sha256</code> is a thin wrapper around OpenSSL,
+        with very low per-call overhead.</li>
+    <li><b>Multi-thread or larger inputs</b>: BLAKE3's SIMD lanes (4&times;
+        for SSE2, 8&times; for AVX2, 16&times; for AVX-512) extract real
+        parallelism from a single hash. SHA-256 cannot parallelise within
+        one hash &mdash; its compression chain is strictly sequential.</li>
+    <li><b>BLAKE3 portable mode</b>: <code>BLAKE3_NO_SIMD=1</code>
+        disables all SIMD intrinsics, falling back to pure C. Useful as
+        a sanity check that the SIMD output matches portable byte-for-
+        byte (this is what audit-simd-blake3.py verifies).</li>
+    <li><b>BLAKE3d vs SHA-256d</b>: the doubled-hash variants both pay
+        2&times; the cost. Their ratio matches the single-hash ratio.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>5. JSON schema</h2>
+<pre>{
+  "comparison":  "pow-throughput",
+  "host":        {"cpu_model": "...", "cores": 16, ...},
+  "timestamp":   "2026-05-13T22:18:43+00:00",
+  "rows": [
+    {
+      "algo": "sha256d", "threads": 1, "input_bytes": 80,
+      "duration_s": 3.0, "total_hashes": 18632000,
+      "hashes_per_sec": 6210000, "ns_per_hash": 161.0
+    },
+    ...
+  ],
+  "summary": {
+    "speedup_blake3d_vs_sha256d_single_thread": 0.83,
+    "speedup_blake3d_vs_sha256d_multi_thread": 0.91
+  }
+}</pre>
+</section>
+
+<section>
+  <h2>6. Common pitfalls</h2>
+  <ul>
+    <li><b>Thermal throttling</b> &mdash; running the benchmark on a
+        laptop with no active cooling will silently drop throughput by
+        20-40% mid-run. Mains-powered desktop or short
+        <code>--duration</code> recommended.</li>
+    <li><b>Other CPU load</b> &mdash; close other applications. The
+        benchmark is single-process but a busy system reduces effective
+        cycles.</li>
+    <li><b>Python overhead</b> &mdash; for absolute throughput, prefer the
+        C-based bench in <code>src/bench/</code>. Python results are
+        directionally correct but understate both algorithms by the FFI
+        overhead.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>7. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/compare/compare-pow-throughput.py">
+        contrib/testing/compare/compare-pow-throughput.py</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/compare/lib/compare_common.py">
+        contrib/testing/compare/lib/compare_common.py</a></li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/compare.html">BLAKE3 vs SHA-256 hub</a>
+  <a class="next" href="/testing/compare/block-validation.html">Block validation &rarr;</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

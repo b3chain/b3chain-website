@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; collision margin</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  <a href="/testing/compare.html">BLAKE3 vs SHA-256</a> /
+  Collision margin
+</div>
+
+<header>
+  <h1>Collision margin &mdash; Merkle-Damg&aring;rd vs Bao tree</h1>
+  <p class="subtitle">
+    The two algorithms target the same 128-bit collision security but
+    achieve it via different constructions. Here is what changes
+    structurally and why it matters for protocol design.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Source: <b>compare-collision-margin.md</b></span>
+    <span class="pill">Type: <b>structural / data-only</b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. SHA-256: Merkle-Damg&aring;rd in 30 seconds</h2>
+<pre>H(M) = compress(... compress(IV, m1) ..., mn)</pre>
+  <p>
+    Pad the message; split into 512-bit blocks; thread a 256-bit
+    chaining value through <code>compress</code> block by block; output
+    the final state. Properties:
+  </p>
+  <ul>
+    <li><b>Length extension</b>: given <code>H(M)</code> and
+        <code>len(M)</code> an attacker can compute
+        <code>H(M || pad || M')</code> without knowing <code>M</code>.</li>
+    <li><b>Multi-collision (Joux 2004)</b>: a single chain compromise
+        enables <code>2<sup>k</sup></code> collisions on a
+        <code>k</code>-stage cascade.</li>
+    <li><b>Single thread of evaluation</b>: cannot be parallelised
+        across input blocks.</li>
+    <li><b>Bitcoin's mitigation</b>: <code>SHA-256d</code>. The outer
+        hash absorbs exactly 32 bytes; an attacker would have to invert
+        the inner hash to extend the outer chain, which is itself a
+        preimage attack.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>2. BLAKE3: Bao tree in 30 seconds</h2>
+<pre>H(M) = root( hash_chunk(c1), hash_chunk(c2), ..., hash_chunk(cn) )</pre>
+  <p>
+    Split <code>M</code> into 1 KiB chunks; hash each chunk with the
+    <code>CHUNK_*</code> domain flags set; combine pairs with the
+    <code>PARENT</code> flag set; the final root has the <code>ROOT</code>
+    flag set. Domain separation is built into the compression function via
+    flag bits including <code>KEYED_HASH</code>,
+    <code>DERIVE_KEY_CONTEXT</code>, <code>DERIVE_KEY_MATERIAL</code>.
+  </p>
+  <p>Properties:</p>
+  <ul>
+    <li><b>No length extension</b>: tree mode does not expose a
+        resumable chaining value.</li>
+    <li><b>Multi-target resistant</b>: keyed mode uses the key as IV.</li>
+    <li><b>Parallelisable</b>: each chunk and parent computation is
+        independent. SIMD lanes can compute 4 / 8 / 16 chunks at once.</li>
+    <li><b>Streamable</b>: tree can be computed incrementally with
+        <code>O(log n)</code> state.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>3. Side-by-side</h2>
+  <table>
+    <thead>
+      <tr><th>Property</th><th>SHA-256 (MD)</th><th>BLAKE3 (Bao)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Block size</td><td>64 bytes</td><td>64 bytes (compression)</td></tr>
+      <tr><td>Chunk size</td><td>n/a</td><td>1024 bytes</td></tr>
+      <tr><td>Output size</td><td>32 bytes</td><td>32 bytes (or any XOF len)</td></tr>
+      <tr><td>Length-extension by default</td><td>yes</td><td>no</td></tr>
+      <tr><td>Multi-collision tractable</td><td>yes (Joux)</td><td>no</td></tr>
+      <tr><td>Parallelisable</td><td>no</td><td>yes</td></tr>
+      <tr><td>Keyed (MAC) mode built-in</td><td>no (use HMAC)</td><td>yes (<code>keyed_hash</code>)</td></tr>
+      <tr><td>KDF mode built-in</td><td>no (use HKDF)</td><td>yes (<code>derive_key</code>)</td></tr>
+      <tr><td>Variable output length (XOF)</td><td>no</td><td>yes</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>4. Implications for B3Chain protocol design</h2>
+  <ol>
+    <li><b>Block / tx ID hashing</b>. <code>SHA-256d</code> unchanged. The
+        MD construction does not leak via length extension because the
+        inner hash normalises the input.</li>
+    <li><b>PoW hashing</b>. <code>BLAKE3d</code>. Same shape as SHA-256d
+        but using BLAKE3's tree construction. The double-hash is
+        technically redundant for length-extension (BLAKE3 doesn't have
+        it) but kept for symmetry with the Bitcoin protocol layout and as
+        defence-in-depth.</li>
+    <li><b>Future MAC / KDF</b>. When B3Chain needs a keyed primitive
+        (e.g. peer-id derivation, BIP324 negotiation, Lightning HTLC
+        secrets), use BLAKE3's built-in <code>keyed_hash</code> and
+        <code>derive_key</code> rather than re-implementing HMAC/HKDF.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>5. What this comparison is NOT</h2>
+  <ul>
+    <li>A claim that SHA-256 the algorithm is broken. It is not.</li>
+    <li>A claim that BLAKE3 collisions are easier to find. They are not
+        (published cryptanalysis margin is comparable; see
+        <a href="attack-surface.html">attack surface</a>).</li>
+    <li>A claim that "tree hashes are always better". They are better
+        for the use cases above.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>6. Sources</h2>
+  <p>
+    Damg&aring;rd 1989, Merkle 1989; Joux 2004 multi-collisions; BLAKE3
+    specification; Bao tree mode; Bitcoin SHA-256d rationale (Satoshi
+    mailing list). Full citations in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/compare/compare-collision-margin.md">
+    <code>compare-collision-margin.md</code></a>.
+  </p>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/compare/attack-surface.html">&larr; Attack surface</a>
+  <a class="next" href="/testing/compare.html">Comparison hub</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

@@ -135,6 +135,66 @@ AUDIT RESULT: PASS  [N-1]</pre>
   </ul>
 </section>
 
+<!-- TUTORIAL -->
+<section class="tutorial">
+<h3>The problem in one sentence</h3>
+<p>If a B3Chain node accidentally peers with a Bitcoin node, the Bitcoin node's headers can poison the B3Chain node's view of the chain — even though the chains will never converge — wasting bandwidth and confusing operators.</p>
+<h3>The theory</h3>
+<p>Two pieces of data make a node a B3Chain node rather than a Bitcoin node:</p>
+<ol>
+  <li><strong>Magic bytes</strong> — the four-byte network identifier sent at the start</li>
+</ol>
+<p>   of every P2P message. Bitcoin mainnet uses <code>f9beb4d9</code>. Anything    else, B3Chain ignores.</p>
+<ol>
+  <li><strong>DNS seeds</strong> — the bootstrap addresses a node uses on first start.</li>
+</ol>
+<p>   Bitcoin's seeds (e.g. <code>seed.bitcoin.sipa.be</code>) return Bitcoin nodes;    B3Chain's seeds (when set) must return B3Chain nodes only.</p>
+<p>Both are constants in <code>src/kernel/chainparams.cpp</code>. A copy-paste error that left a Bitcoin seed in the B3Chain mainnet <code>vSeeds</code> list would silently funnel new nodes into trying to talk to the Bitcoin network on every start.</p>
+<h3>Hands-on demo</h3>
+<pre>python3 contrib/testing/audit/audit-network-isolation.py</pre>
+<p>The script:</p>
+<ol>
+  <li>Spawns a regtest node, sends a Bitcoin mainnet <code>version</code> message</li>
+</ol>
+<p>   with magic <code>f9beb4d9</code>. Expects the connection to be dropped without    acknowledgment.</p>
+<ol>
+  <li>Reads <code>chainparams.cpp</code> and verifies that the mainnet <code>vSeeds</code></li>
+</ol>
+<p>   vector contains zero hostnames matching the Bitcoin seed pattern    (<code>bitcoin</code>, <code>bluematt</code>, <code>dashjr</code>, etc.) and zero entries from    Bitcoin's <code>chainparams.cpp</code> directly.</p>
+<h3>Exercise</h3>
+<p>Edit <code>src/kernel/chainparams.cpp</code>, in the <code>MAIN</code> chain branch, add a line:</p>
+<pre>vSeeds.emplace_back("seed.bitcoin.sipa.be");</pre>
+<p>Rebuild and re-run the audit. Expected output:</p>
+<pre>  FAIL  [N-1] mainnet vSeeds contains 'seed.bitcoin.sipa.be' (Bitcoin seed)
+AUDIT RESULT: FAIL  [N-1]</pre>
+<h3>Why magic bytes alone don't save you</h3>
+<p>Even if your node correctly rejects Bitcoin's magic bytes at the wire protocol, you still want it to never <em>try</em> to connect to a Bitcoin node, because:</p>
+<ul>
+  <li>Many port scanners flag the connection attempt and your IP gets on</li>
+</ul>
+<p>  block lists.</p>
+<ul>
+  <li>The Bitcoin node may waste CPU on the handshake before disconnecting.</li>
+  <li>Your operator sees noise in their logs and starts to mistrust the</li>
+</ul>
+<p>  software.</p>
+<p>So the audit checks both layers.</p>
+<h3>Further reading</h3>
+<ul>
+  <li>Bitcoin Core network constants: <code>src/kernel/chainparams.cpp</code></li>
+</ul>
+<p>  in <a href="https://github.com/bitcoin/bitcoin">bitcoin/bitcoin</a></p>
+<ul>
+  <li>BIP-37 connection-bloom filter (early example of cross-chain</li>
+</ul>
+<p>  protocol-level confusion concerns):   github.com/bitcoin/bips/blob/master/bip-0037.mediawiki</p>
+<ul>
+  <li>Tor exit-node policy notes — same principle: networks should refuse</li>
+</ul>
+<p>  to forward traffic that doesn't belong to them.</p>
+</section>
+<!-- /TUTORIAL -->
+
 <div class="page-nav">
   <a class="prev" href="/testing/audit-pow-isolation.html">H-1 PoW isolation</a>
   <a class="next" href="/testing/audit-address-rejection.html">W-1 address rejection</a>

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; block validation comparison</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  <a href="/testing/compare.html">BLAKE3 vs SHA-256</a> /
+  Block validation
+</div>
+
+<header>
+  <h1>End-to-end block validation &mdash; bitcoind vs b3chaind</h1>
+  <p class="subtitle">
+    The most defensible single number we can produce: wall time to
+    re-validate a fixed regtest chain on each daemon, exercising the
+    full validation path (deserialise, script, PoW, merkle, UTXO).
+  </p>
+  <div class="tagrow">
+    <span class="pill">Script: <b>compare-block-validation.py</b></span>
+    <span class="pill">Output: <b>results/block-validation-*.json</b></span>
+    <span class="pill">Type: <b>end-to-end</b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Why this is the comparison that matters</h2>
+  <p>
+    Microbenchmarks for hash throughput tell you how fast an algorithm
+    runs in isolation. They tell you almost nothing about how fast a
+    full node validates new blocks, because validation is dominated by
+    script execution, signature verification, and database writes &mdash;
+    not hashing. The hashing is at most ~10% of full-block validation
+    cost on Bitcoin Core.
+  </p>
+  <p>
+    This comparison reindexes a 2016-block regtest chain (one full
+    Bitcoin retarget period) on each daemon, with identical hardware and
+    identical chains. The wall time gives you the actual end-user impact
+    of swapping the PoW hash function.
+  </p>
+</section>
+
+<section>
+  <h2>2. Methodology</h2>
+  <ol>
+    <li>Spawn a fresh regtest <code>bitcoind</code>; mine 2016 blocks.</li>
+    <li>Stop the daemon.</li>
+    <li>Restart with <code>-reindex</code>; record wall time until the
+        height matches and <code>verificationprogress &gt; 0.999</code>.</li>
+    <li>Repeat for <code>b3chaind</code> with its own fresh chain.</li>
+    <li>Both runs use the same <code>-rpcuser/-rpcpassword</code>, same
+        ports (auto-allocated), same <code>-fallbackfee</code>, no DNS
+        seeds, no Tor, single thread for the daemon.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>3. How to run</h2>
+<pre>cd b3chain
+
+# Build both daemons; b3chaind comes from this repo, bitcoind from upstream.
+cmake -B build &amp;&amp; cmake --build build -j$(nproc)
+# (build bitcoind separately, or apt install if available)
+
+# Auto-detect both binaries from $PATH:
+python3 contrib/testing/compare/compare-block-validation.py
+
+# Or point explicitly:
+BITCOIND=/usr/local/bin/bitcoind \
+B3CHAIND=$PWD/build/bin/b3chaind \
+python3 contrib/testing/compare/compare-block-validation.py --blocks 2016</pre>
+</section>
+
+<section>
+  <h2>4. Sample output</h2>
+<pre>  measuring bitcoind (/usr/local/bin/bitcoind)
+    reindex 2016 blocks in 14.27s (141.3 blocks/s)
+
+  measuring b3chaind (/home/dev/b3chain/build/bin/b3chaind)
+    reindex 2016 blocks in 13.04s (154.6 blocks/s)
+
+  wrote contrib/testing/compare/results/block-validation-...json
+
+| daemon   | blocks | reindex (s) | blocks/s |
+|----------|-------:|------------:|---------:|
+| bitcoind |   2016 |       14.27 |    141.3 |
+| b3chaind |   2016 |       13.04 |    154.6 |
+
+b3chaind reindex vs bitcoind: 0.91x (faster)</pre>
+</section>
+
+<section>
+  <h2>5. What the difference means</h2>
+  <p>
+    A 1.0x ratio would mean the PoW algorithm change has no effect on
+    full-block validation cost &mdash; expected, because the hash is a
+    small fraction of the work. A &lt;1.0x ratio (b3chaind faster) reflects
+    the cumulative effect of BLAKE3's SIMD lanes on every block-header
+    PoW check during reindex. Empirically the gap is single-digit
+    percent: meaningful but not transformative.
+  </p>
+</section>
+
+<section>
+  <h2>6. Pitfalls</h2>
+  <ul>
+    <li><b>Cold disk cache</b> &mdash; first run is slower than steady-
+        state. Run twice, take the second number.</li>
+    <li><b>Different storage</b> &mdash; both daemons must write to the
+        same physical disk. The script puts both <code>datadir</code>s
+        under <code>/tmp</code> by default which is usually a tmpfs.</li>
+    <li><b>Different build flags</b> &mdash; <code>-O2</code> vs
+        <code>-O3</code>, <code>-march=native</code>, sanitizers. Both
+        binaries should be built with the same release flags.</li>
+    <li><b>Validation, not propagation</b> &mdash; this measures local
+        reindex, not network sync. Network sync depends on peers.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>7. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/compare/compare-block-validation.py">
+        contrib/testing/compare/compare-block-validation.py</a></li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/compare/pow-throughput.html">&larr; Hash throughput</a>
+  <a class="next" href="/testing/compare/length-extension.html">Length extension &rarr;</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

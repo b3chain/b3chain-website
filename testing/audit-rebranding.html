@@ -154,6 +154,98 @@ AUDIT RESULT: PASS  [B-2]</pre>
   </ul>
 </section>
 
+<!-- TUTORIAL -->
+<section class="tutorial">
+<h3>The problem in one sentence</h3>
+<p>A B3Chain release that says "Bitcoin" anywhere a user can see is a trust-destroying bug; a B3Chain release where a "Bitcoin"-named test quietly stops running is the much bigger silent bug.</p>
+<h3>The theory</h3>
+<p>Rebranding a Bitcoin Core fork involves two distinct kinds of change:</p>
+<ol>
+  <li><strong>String changes</strong> — every user-facing mention of "Bitcoin" /</li>
+</ol>
+<p>   <code>bitcoind</code> / <code>bitcoin-cli</code> / <code>bc1</code> / etc. that should now read    "B3Chain" / <code>b3chaind</code> / <code>b3chain-cli</code> / <code>b3</code>.</p>
+<ol>
+  <li><strong>Behaviour changes</strong> — the underlying logic must keep working.</li>
+</ol>
+<p>   Renaming a class member or a config flag often means a test that    referenced the old name now silently doesn't exercise the new one.</p>
+<p>Both classes of bug have bitten previous Bitcoin forks. The audit covers both.</p>
+<h3>Hands-on demo</h3>
+<pre>bash contrib/testing/audit/audit-rebranding.sh</pre>
+<p>The script does:</p>
+<ol>
+  <li><strong>Forbidden-pattern grep</strong> over <code>src/</code> and <code>contrib/</code>:</li>
+</ol>
+<ul>
+  <li><code>"Bitcoin Signed Message"</code> outside <code>src/test/</code></li>
+  <li><code>bitcoin:</code> URI scheme outside protocol constants</li>
+  <li><code>bitcoind</code> / <code>bitcoin-cli</code> in non-historical <code>.md</code> files</li>
+  <li><code>tr("...Bitcoin...")</code> in Qt source</li>
+  <li>allowlist for legitimate references (copyright lines, contrast tables, etc.)</li>
+</ul>
+<ol>
+  <li><strong>Behavioural regression</strong>: rebuilds the project and re-runs the</li>
+</ol>
+<p>   full unit + functional + regtest simulation suites. Any change in    pass/fail counts vs the pre-rebrand baseline is reported.</p>
+<h3>Hands-on: see the catch</h3>
+<p>The first time we ran this audit it caught <strong>9 real string regressions</strong> that the rebranding pass had missed:</p>
+<ul>
+  <li>5 Qt <code>tr()</code> strings still saying "Bitcoin" (address book, intro</li>
+</ul>
+<p>  dialog, GUI utilities, send-coins dialog).</p>
+<ul>
+  <li>1 RPC error message ("Invalid Bitcoin address" in</li>
+</ul>
+<p>  <code>rawtransaction_util.cpp</code>).</p>
+<ul>
+  <li>1 Doxygen project name still set to "Bitcoin Core".</li>
+  <li>9 contrib README files referring to <code>bitcoind</code> / <code>bitcoin-cli</code> in</li>
+</ul>
+<p>  command examples.</p>
+<p>All fixed in the same commit set as the audit framework. See <code>doc/SECURITY-AUDIT.md</code> "Findings and remediation" section for the full table.</p>
+<h3>Exercise</h3>
+<p>Add a string regression: in <code>src/qt/utilitydialog.cpp</code>, change a visible label to mention "Bitcoin":</p>
+<pre>ui-&gt;aboutMessage-&gt;setHtml("Welcome to &lt;b&gt;Bitcoin&lt;/b&gt; wallet"); // was B3Chain</pre>
+<p>Re-run:</p>
+<pre>bash contrib/testing/audit/audit-rebranding.sh</pre>
+<p>Expected output:</p>
+<pre>  FAIL  [B-2] forbidden pattern 'Bitcoin' in user-visible Qt string
+        src/qt/utilitydialog.cpp:127: setHtml("Welcome to &lt;b&gt;Bitcoin&lt;/b&gt;...")
+AUDIT RESULT: FAIL  [B-2]</pre>
+<h3>Why allowlists are dangerous, and how we manage them</h3>
+<p>Some references to "Bitcoin" are deliberately preserved:</p>
+<ul>
+  <li>Copyright lines: <code>// Copyright (c) 2009-2024 The Bitcoin Core developers</code></li>
+  <li>Contrast tables: README files that explain B3Chain by reference to</li>
+</ul>
+<p>  Bitcoin</p>
+<ul>
+  <li>External URLs: e.g. <code>org.bitcoincore.flathub</code></li>
+</ul>
+<p>These are explicitly allowlisted in <code>audit-rebranding.sh</code>. The risk is that the allowlist grows quietly until it hides real bugs. We mitigate by:</p>
+<ul>
+  <li>Keeping each allowlist entry on its own line with a comment justifying</li>
+</ul>
+<p>  it.</p>
+<ul>
+  <li>Forbidding allowlist additions in the same commit as the change being</li>
+</ul>
+<p>  allowed (must be a separate, reviewed PR).</p>
+<ul>
+  <li>Periodically auditing the allowlist itself.</li>
+</ul>
+<h3>Further reading</h3>
+<ul>
+  <li>Litecoin's rebranding history (one of the earliest forks, with a</li>
+</ul>
+<p>  long-tail of "litecoind" -&gt; "Litecoin Core" string updates):   github.com/litecoin-project/litecoin</p>
+<ul>
+  <li>Bitcoin Cash's rebrand from Bitcoin ABC (similar churn).</li>
+  <li>The "BIP / book" review pattern: every string change is reviewed by</li>
+</ul>
+<p>  someone other than the author.</p>
+</section>
+<!-- /TUTORIAL -->
+
 <div class="page-nav">
   <a class="prev" href="/testing/audit-simd-blake3.html">B-1 SIMD BLAKE3</a>
   <a class="next" href="/testing/audit-hd-coin-type.html">W-2 HD coin_type</a>

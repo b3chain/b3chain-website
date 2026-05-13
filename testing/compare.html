@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; BLAKE3 vs SHA-256 comparison</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  BLAKE3 vs SHA-256
+</div>
+
+<header>
+  <h1>BLAKE3 vs SHA-256 &mdash; comparative suite</h1>
+  <p class="subtitle">
+    Side-by-side measurements and structural analysis of the two hash
+    functions. Empirical scripts produce numerical output; data-only
+    documents survey the published literature. Every claim is either
+    measured locally and JSON-logged, or sourced.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Source: <b>contrib/testing/compare/</b></span>
+    <span class="pill">Output: <b>results/*.json</b></span>
+    <span class="pill">Latest: <b>see individual pages</b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Empirical comparisons (run locally)</h2>
+  <div class="card-grid">
+    <a class="card" href="compare/pow-throughput.html">
+      <h3>Hash throughput</h3>
+      <div class="desc">
+        SHA-256 / SHA-256d / BLAKE3 / BLAKE3d / BLAKE3-portable measured
+        in hashes-per-second, single thread and N-thread, on the host CPU.
+      </div>
+      <div class="meta">
+        <code>compare-pow-throughput.py</code>
+        <span class="badge badge-skip">RUN-IT</span>
+      </div>
+    </a>
+
+    <a class="card" href="compare/block-validation.html">
+      <h3>End-to-end block validation</h3>
+      <div class="desc">
+        Wall time to <code>-reindex</code> 2016 regtest blocks on
+        <code>bitcoind</code> vs <code>b3chaind</code>. Most defensible
+        single number &mdash; whole validation path, not just hashing.
+      </div>
+      <div class="meta">
+        <code>compare-block-validation.py</code>
+        <span class="badge badge-skip">RUN-IT</span>
+      </div>
+    </a>
+
+    <a class="card" href="compare/length-extension.html">
+      <h3>Length-extension safety</h3>
+      <div class="desc">
+        Working SHA-256 length-extension forgery against a naive MAC; same
+        attack against BLAKE3 fails by construction. Construction-level
+        safety, not a Bitcoin attack.
+      </div>
+      <div class="meta">
+        <code>compare-length-extension.py</code>
+        <span class="badge badge-skip">DEMO</span>
+      </div>
+    </a>
+  </div>
+</section>
+
+<section>
+  <h2>2. Structural / data-only comparisons</h2>
+  <div class="card-grid">
+    <a class="card" href="compare/asic-landscape.html">
+      <h3>ASIC landscape</h3>
+      <div class="desc">
+        Bitcoin's mature SHA-256 ASIC market vs BLAKE3's nascent one;
+        what this means for B3Chain's launch-time decentralisation.
+      </div>
+      <div class="meta">
+        <code>compare-asic-landscape.md</code>
+        <span class="badge badge-skip">DATA</span>
+      </div>
+    </a>
+
+    <a class="card" href="compare/energy.html">
+      <h3>Energy per hash</h3>
+      <div class="desc">
+        Algorithm-level energy figures from the BLAKE3 paper plus
+        manufacturer ASIC J/TH numbers, with the necessary caveats.
+      </div>
+      <div class="meta">
+        <code>compare-energy.md</code>
+        <span class="badge badge-skip">DATA</span>
+      </div>
+    </a>
+
+    <a class="card" href="compare/attack-surface.html">
+      <h3>Attack surface &amp; cryptanalysis</h3>
+      <div class="desc">
+        CVE history, round-reduced cryptanalysis status, structural
+        properties (length-extension, multi-target, side channels).
+      </div>
+      <div class="meta">
+        <code>compare-attack-surface.md</code>
+        <span class="badge badge-skip">DATA</span>
+      </div>
+    </a>
+
+    <a class="card" href="compare/collision-margin.html">
+      <h3>Collision margin (MD vs Bao)</h3>
+      <div class="desc">
+        Merkle-Damgard chained compression vs BLAKE3's tree mode &mdash;
+        what changes structurally and why it matters for protocol design.
+      </div>
+      <div class="meta">
+        <code>compare-collision-margin.md</code>
+        <span class="badge badge-skip">DATA</span>
+      </div>
+    </a>
+  </div>
+</section>
+
+<section>
+  <h2>3. Run all empirical comparisons</h2>
+<pre>cd b3chain
+bash contrib/testing/compare/run-all-compare.sh</pre>
+  <p>
+    Each script prints a markdown table on stdout and writes a JSON file
+    under <code>contrib/testing/compare/results/</code>. The hub page
+    above is regenerated from <code>results/latest.json</code> when the
+    site is deployed.
+  </p>
+</section>
+
+<section>
+  <h2>4. Honesty caveats</h2>
+  <ul>
+    <li>Throughput numbers vary substantially by CPU, cache size, and
+        thermal state. Each result records <code>cpu_model</code> and
+        <code>cores</code> so you can re-interpret.</li>
+    <li>The BLAKE3 throughput advantage is largest on multi-thread
+        large-input workloads. Single-thread 80-byte hashing through a
+        Python wrapper is dominated by call overhead.</li>
+    <li>The length-extension demo is about <em>construction</em>
+        differences. Bitcoin's <code>SHA-256d</code> sidesteps the LE issue
+        intentionally; BLAKE3 sidesteps it by design.</li>
+    <li>SHA-256 ASICs are a mature market with a 15-year head start.
+        BLAKE3 ASICs are nascent. This asymmetry is part of why we picked
+        BLAKE3 for launch security; it is not a permanent property.</li>
+  </ul>
+</section>
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

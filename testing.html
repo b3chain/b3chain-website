@@ -257,10 +257,63 @@
 </section>
 
 <!-- ================================================================ -->
-<!-- Section 4: Quick prerequisites &amp; copy-paste run-all -->
+<!-- Section 4: Extended evidence (inheritance, comparisons, roadmap) -->
+<!-- ================================================================ -->
+<section id="extended-evidence">
+  <h2>4. Extended security evidence <a class="anchor" href="#extended-evidence">#</a></h2>
+  <p>
+    Three additional bodies of evidence layered on top of the Phase 11
+    self-audit: regression-testing what Bitcoin already proves, side-by-side
+    measurements of BLAKE3 vs SHA-256, and a forward-looking improvement
+    roadmap.
+  </p>
+
+  <div class="card-grid">
+    <a class="card" href="testing/bitcoin-inheritance.html">
+      <h3>Bitcoin security inheritance</h3>
+      <div class="desc">
+        Bitcoin Core's full unit + functional suite, run unmodified on
+        b3chain, classified into <code>inherited</code> /
+        <code>diverged-by-design</code> / <code>failing</code>.
+      </div>
+      <div class="meta">
+        <code>audit-bitcoin-inheritance.sh</code>
+        <span class="badge badge-skip">PENDING RUN</span>
+      </div>
+    </a>
+
+    <a class="card" href="testing/compare.html">
+      <h3>BLAKE3 vs SHA-256 comparison</h3>
+      <div class="desc">
+        Throughput, block-validation wall time, length-extension demo,
+        ASIC landscape, energy, attack surface, collision margin.
+      </div>
+      <div class="meta">
+        <code>contrib/testing/compare/</code>
+        <span class="badge badge-pass">7 PAGES</span>
+      </div>
+    </a>
+
+    <a class="card" href="testing/roadmap.html">
+      <h3>Security roadmap</h3>
+      <div class="desc">
+        Eight prioritised improvements: OSS-Fuzz, reproducible Guix builds,
+        bench CI, external audit, bug bounty, PQC experiment, checkpoint
+        ceremony, miner attestation.
+      </div>
+      <div class="meta">
+        <code>doc/SECURITY-ROADMAP.md</code>
+        <span class="badge badge-skip">PROPOSED</span>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- Section 5: Quick prerequisites &amp; copy-paste run-all -->
 <!-- ================================================================ -->
 <section id="quick-start">
-  <h2>4. Run everything yourself <a class="anchor" href="#quick-start">#</a></h2>
+  <h2>5. Run everything yourself <a class="anchor" href="#quick-start">#</a></h2>
 
   <h3>Prerequisites</h3>
   <div class="kvs">

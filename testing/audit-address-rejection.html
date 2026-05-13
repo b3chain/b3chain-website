@@ -132,6 +132,57 @@ AUDIT RESULT: PASS  [W-1]</pre>
   </ul>
 </section>
 
+<!-- TUTORIAL -->
+<section class="tutorial">
+<h3>The problem in one sentence</h3>
+<p>Users routinely paste Bitcoin addresses into B3Chain wallets (and vice versa); a fork that silently accepts them is asking to lose money for those users.</p>
+<h3>The theory</h3>
+<p>Two address formats coexist on Bitcoin:</p>
+<ul>
+  <li><strong>Base58Check P2PKH / P2SH</strong> — version byte <code>0x00</code> (P2PKH, <code>1...</code>),</li>
+</ul>
+<p>  <code>0x05</code> (P2SH, <code>3...</code>).</p>
+<ul>
+  <li><strong>Bech32 / Bech32m</strong> — HRP <code>bc</code> for mainnet (<code>bc1q...</code> for SegWit v0,</li>
+</ul>
+<p>  <code>bc1p...</code> for Taproot), <code>tb</code> for testnet.</p>
+<p>B3Chain reuses Base58 mathematics with a different version byte and Bech32 mathematics with HRP <code>b3</code> (mainnet) / <code>tb3</code> (testnet). The algorithm is unchanged; the prefix differs.</p>
+<p>This is enough that an attacker cannot trivially make a B3Chain address validate as a Bitcoin address. But it is <strong>not</strong> enough on its own — RPC commands like <code>validateaddress</code>, <code>sendtoaddress</code>, <code>importdescriptors</code> must each independently reject the wrong-network input. A single missed code path means a user can lose funds by typing in a Bitcoin address that the wallet politely accepts.</p>
+<h3>Hands-on demo</h3>
+<pre>python3 contrib/testing/audit/audit-address-rejection.py</pre>
+<p>The script tries 36 real Bitcoin addresses (12 P2PKH, 8 P2SH, 8 Bech32 v0, 4 Bech32m Taproot, plus 4 invalid edge cases) against:</p>
+<ul>
+  <li><code>validateaddress</code></li>
+  <li><code>sendtoaddress</code> (with <code>-fallbackfee</code> set, no-op if rejected)</li>
+  <li><code>importdescriptors</code> with a Bitcoin xpub</li>
+</ul>
+<p>Every test must produce <code>isvalid: false</code> or an RPC error.</p>
+<h3>Exercise</h3>
+<p>In <code>src/key_io.cpp</code>, locate <code>DecodeDestination</code>. Add a fallback that also tries decoding with HRP <code>bc</code>:</p>
+<pre>// Before
+auto dest = DecodeBech32(str, params.Bech32HRP());
+// After (BAD)
+auto dest = DecodeBech32(str, params.Bech32HRP());
+if (!IsValidDestination(dest)) {
+    dest = DecodeBech32(str, "bc");  // accept Bitcoin too "for compatibility"
+}</pre>
+<p>Rebuild, re-run the audit. Expected output:</p>
+<pre>  FAIL  [W-1] Bitcoin address bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4 was accepted
+  FAIL  [W-1] sendtoaddress to bc1q... succeeded (should have rejected)
+AUDIT RESULT: FAIL  [W-1]</pre>
+<h3>Defence in depth</h3>
+<p>Even with all 36 addresses rejected at the RPC layer, the audit also checks the cross-derivation property: a B3Chain xpub at coin_type 9333 must produce different addresses than the same seed at Bitcoin's coin_type 0. This catches the much subtler bug where the address <em>format</em> is correctly rejected, but the <em>underlying private key</em> is shared with a Bitcoin wallet — making any signed B3Chain transaction potentially replayable on Bitcoin.</p>
+<h3>Further reading</h3>
+<ul>
+  <li>BIP-173 Bech32 and SegWit address format</li>
+  <li>BIP-350 Bech32m for Taproot</li>
+  <li>BIP-44 multi-account hierarchy (and why coin_type matters)</li>
+  <li>"I sent BSV to a BTC address" / "I sent ETH to a BTC address" — every</li>
+</ul>
+<p>  exchange's customer-support FAQ has a section on this; B3Chain should   not contribute to it.</p>
+</section>
+<!-- /TUTORIAL -->
+
 <div class="page-nav">
   <a class="prev" href="/testing/audit-network-isolation.html">N-1 network isolation</a>
   <a class="next" href="/testing/audit-simd-blake3.html">B-1 SIMD BLAKE3</a>

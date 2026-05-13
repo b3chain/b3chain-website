@@ -261,6 +261,100 @@ AUDIT RESULT: PASS  [A-1]</pre>
   </ul>
 </section>
 
+<!-- TUTORIAL -->
+<section class="tutorial">
+<h3>The problem in one sentence</h3>
+<p>A miner with majority hashpower can always re-write recent history; the question is "how recent" and "at what cost", and the answer is testable on regtest with the demo here.</p>
+<h3>The theory (Nakamoto's race)</h3>
+<p>If the attacker controls fraction <code>q</code> of total hashpower (<code>p = 1 - q</code> honest), the probability of catching up from <code>z</code> confirmations is:</p>
+<p>\[ P_z = \left( \frac{q}{p} \right)^z \quad \text{for } q &lt; p \]</p>
+<p>For <code>q &lt; 0.5</code> this decays exponentially in <code>z</code>. For <code>q ≥ 0.5</code> it is <strong>1</strong> — the attacker wins eventually, with high probability.</p>
+<p>Practical confirmation thresholds (Satoshi 2008, simplified):</p>
+<p>| q (attacker share) | confirmations for P_z &lt; 0.001 | |--------------------|-------------------------------| | 10%                | 6                             | | 20%                | 11                            | | 30%                | 24                            | | 40%                | 89                            | | 49%                | thousands (impractical)       |</p>
+<h3>Hands-on demo</h3>
+<pre>python3 contrib/testing/audit/audit-51-attack-sim.py</pre>
+<p>The script:</p>
+<ol>
+  <li>Spawns two isolated regtest clusters (3 nodes each):</li>
+</ol>
+<p>   "honest" and "attacker".</p>
+<ol>
+  <li>Honest cluster mines 100 blocks; attacker mines 99 from the same</li>
+</ol>
+<p>   parent in private.</p>
+<ol>
+  <li>Honest cluster sends a transaction to a third party, gets 6</li>
+</ol>
+<p>   confirmations.</p>
+<ol>
+  <li>Attacker secretly mines 7 more blocks (8 total &gt; honest's 6),</li>
+</ol>
+<p>   double-spending the same UTXO to an attacker-controlled address.</p>
+<ol>
+  <li>Attacker reveals the longer chain. Both clusters reorganise.</li>
+  <li>The original tx is reversed; the attacker's double-spend is now</li>
+</ol>
+<p>   in the canonical chain.</p>
+<ol>
+  <li>Output: blocks reorganised, time elapsed, hashrate ratio required.</li>
+</ol>
+<p>The demo runs in ~30s on regtest. On mainnet at typical difficulty, the same scenario would cost many millions of dollars in compute time and electricity — that's the gap that keeps Bitcoin safe.</p>
+<h3>Exercise: the cost calculator</h3>
+<p>Open the script. The <code>attacker_hashrate_ratio</code> parameter controls how much faster the attacker mines than the honest cluster. With <code>ratio=2.0</code> (attacker has 2/3 of total hashpower), the attack finishes in ~10s on regtest. With <code>ratio=1.05</code> (attacker has barely 51%), the attack still always succeeds but takes much longer in expected wall time.</p>
+<p>Try:</p>
+<pre>python3 contrib/testing/audit/audit-51-attack-sim.py --ratio 1.05 --timeout 600</pre>
+<p>You should see the attack succeed but take hundreds of seconds, matching the exponential decay above.</p>
+<h3>What protects B3Chain</h3>
+<p>Three layers, in increasing order of importance:</p>
+<ol>
+  <li><strong>BLAKE3 PoW reduces ASIC concentration risk in early days.</strong> The</li>
+</ol>
+<p>   cost-of-attack at launch is bounded by GPU/CPU rental rates, which    are diffuse. Bitcoin's SHA-256 ASIC market is concentrated in 5    companies; those companies could (in principle) repurpose hardware    to attack a SHA-256 fork from day one. BLAKE3 doesn't have that    problem yet.</p>
+<ol>
+  <li><strong>Conservative confirmation defaults.</strong> Wallets and exchanges should</li>
+</ol>
+<p>   require more confirmations for high-value B3Chain transactions in    year one, until total hashrate grows enough that the cost-of-attack    is high.</p>
+<ol>
+  <li><strong>Checkpoint key ceremony</strong> (planned, see</li>
+</ol>
+<p>   <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/SECURITY-ROADMAP.md"><code>SECURITY-ROADMAP.md</code></a>). Trusted    maintainers sign post-launch checkpoint hashes; nodes can opt in to    refuse reorgs deeper than the most recent checkpoint. Centralising    in a way, but the recovery option exists if a sustained attack    appears.</p>
+<h3>What does NOT protect against 51%</h3>
+<ul>
+  <li>"Just keep upgrading the difficulty algorithm" — doesn't help; the</li>
+</ul>
+<p>  attacker also benefits from the higher difficulty.</p>
+<ul>
+  <li>"Detect the attacker by IP" — they're using cloud rental and</li>
+</ul>
+<p>  rotating IPs.</p>
+<ul>
+  <li>"Charge a fee for reorgs" — there's no protocol mechanism to do this</li>
+</ul>
+<p>  generically.</p>
+<ul>
+  <li>"Switch to PoS" — different security model; B3Chain is committed to</li>
+</ul>
+<p>  PoW.</p>
+<h3>Further reading</h3>
+<ul>
+  <li>Satoshi Nakamoto, "Bitcoin: A Peer-to-Peer Electronic Cash System",</li>
+</ul>
+<p>  section 11 ("Calculations"):   bitcoin.org/bitcoin.pdf</p>
+<ul>
+  <li>Eyal &amp; Sirer, "Majority is not Enough: Bitcoin Mining is</li>
+</ul>
+<p>  Vulnerable" (selfish mining attack):   arxiv.org/abs/1311.0243</p>
+<ul>
+  <li>Bonneau et al., "SoK: Research Perspectives and Challenges for</li>
+</ul>
+<p>  Bitcoin and Cryptocurrencies" (2015 IEEE S&amp;P):   cseweb.ucsd.edu/~smeiklejohn/files/ieeesp15.pdf</p>
+<ul>
+  <li>Ethereum Classic 51% attacks (2019, 2020) — real-world examples of</li>
+</ul>
+<p>  the cost-of-attack curve at small chain sizes.</p>
+</section>
+<!-- /TUTORIAL -->
+
 <div class="page-nav">
   <a class="prev" href="/testing/audit-hd-coin-type.html">W-2 HD coin_type</a>
   <a class="next" href="/testing.html">Back to testing hub</a>

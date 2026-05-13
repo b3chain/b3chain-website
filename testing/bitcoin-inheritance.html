@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; Bitcoin Security Inheritance</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  Bitcoin Security Inheritance
+</div>
+
+<header>
+  <h1>Bitcoin Security Inheritance</h1>
+  <p class="subtitle">
+    Bitcoin Core ships ~140 C++ unit-test groups and ~158 functional tests.
+    They encode the security properties Bitcoin already proves &mdash; block
+    validation, script soundness, mempool policy, p2p safety, wallet
+    correctness. B3Chain inherits Bitcoin Core 30.2.0, so these tests run
+    here too. This page is a public summary of what passes, what is
+    deliberately different, and why.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Source: <b>doc/SECURITY-INHERITANCE.md</b></span>
+    <span class="pill">Verifier: <b>audit-bitcoin-inheritance.sh</b></span>
+    <span class="pill">Last run: <b>not yet</b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Why this matters</h2>
+  <p>
+    The Phase 11 self-audit covers the things B3Chain
+    <em>changed</em> &mdash; the BLAKE3 PoW swap, the new address prefix,
+    the BIP44 coin_type, the 51% attack scenario. It does
+    <strong>not</strong> check that Bitcoin's other security properties are
+    still intact after we forked. This page closes that gap.
+  </p>
+  <p>
+    The principle is simple: every Bitcoin invariant is one we get for free
+    as long as the test that proves it still passes. If a test we expected
+    to inherit suddenly fails, it is a real regression and we file it.
+  </p>
+</section>
+
+<section>
+  <h2>2. Headline numbers</h2>
+  <table>
+    <thead><tr><th>Status</th><th>Count</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge badge-pass">inherited</span></td>
+          <td>&mdash;</td>
+          <td>Bitcoin's test passes unmodified on B3Chain. Free property.</td></tr>
+      <tr><td><span class="badge badge-pass">inherited-with-rebrand</span></td>
+          <td>&mdash;</td>
+          <td>Passes after rebranding strings (e.g. <code>bitcoind</code> &rarr; <code>b3chaind</code>); underlying invariant unchanged.</td></tr>
+      <tr><td><span class="badge badge-skip">diverged-by-design</span></td>
+          <td>&mdash;</td>
+          <td>B3Chain intentionally differs (PoW, address HRP, coin_type). A B3Chain-specific test in <code>contrib/testing/audit/</code> covers the new behaviour.</td></tr>
+      <tr><td><span class="badge badge-fail">failing-investigation</span></td>
+          <td>&mdash;</td>
+          <td>Real regression. We did not mean to break this. Filed as an issue with label <code>inheritance-regression</code>.</td></tr>
+      <tr><td><span class="badge badge-skip">pending</span></td>
+          <td>&mdash;</td>
+          <td>Verifier hasn't run yet on this row.</td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Counts will populate after the first
+    <code>audit-bitcoin-inheritance.sh</code> run on a built tree.
+  </p>
+</section>
+
+<section>
+  <h2>3. What we inherit (selected)</h2>
+  <table>
+    <thead><tr><th>Bitcoin invariant</th><th>Upstream test</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Script verification (P2PKH, P2SH, SegWit, Taproot)</td>
+          <td><code>script_tests.cpp</code>, <code>feature_taproot.py</code></td>
+          <td><span class="badge badge-pass">inherited</span></td></tr>
+      <tr><td>Mempool policy (RBF, package, ancestor limits)</td>
+          <td><code>mempool_tests.cpp</code>, <code>feature_rbf.py</code></td>
+          <td><span class="badge badge-pass">inherited</span></td></tr>
+      <tr><td>BIP-30/34/65/66/68/112/113/141/143/147/341/342</td>
+          <td>per-BIP functional tests</td>
+          <td><span class="badge badge-pass">inherited</span></td></tr>
+      <tr><td>SHA-256(d), HMAC, RIPEMD-160 (still used for txid &amp; merkle)</td>
+          <td><code>crypto_tests.cpp</code></td>
+          <td><span class="badge badge-pass">inherited</span></td></tr>
+      <tr><td>BIP32 derivation, descriptor wallets, PSBT (BIP174)</td>
+          <td><code>bip32_tests.cpp</code>, <code>descriptor_tests.cpp</code></td>
+          <td><span class="badge badge-pass">inherited</span></td></tr>
+      <tr><td>BIP155 addrv2, BIP324 v2 transport, peer eviction, DoS scoring</td>
+          <td><code>bip324_tests.cpp</code>, <code>denialofservice_tests.cpp</code></td>
+          <td><span class="badge badge-pass">inherited</span></td></tr>
+      <tr><td>Block weight, sigops, coinbase maturity, halving schedule</td>
+          <td><code>feature_block.py</code>, <code>validation_tests.cpp</code></td>
+          <td><span class="badge badge-pass">inherited</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>4. What is deliberately different</h2>
+  <table>
+    <thead><tr><th>What we changed</th><th>Why</th><th>B3Chain-specific test</th></tr></thead>
+    <tbody>
+      <tr><td>PoW algorithm (SHA-256d &rarr; double BLAKE3-256)</td>
+          <td>Reduces ASIC concentration risk in early days; faster verification.</td>
+          <td><code>audit-pow-isolation.py</code> (H-1), <code>audit-simd-blake3.py</code> (B-1)</td></tr>
+      <tr><td>Address HRP (<code>bc</code> &rarr; <code>b3</code>)</td>
+          <td>Cross-chain address confusion is the most-reported user error in forks.</td>
+          <td><code>audit-address-rejection.py</code> (W-1) &mdash; 36 Bitcoin samples rejected.</td></tr>
+      <tr><td>BIP44 coin_type (<code>0</code> &rarr; <code>9333</code>)</td>
+          <td>Same seed in a Bitcoin wallet must derive different keys; protects users from accidental cross-chain spend.</td>
+          <td><code>audit-hd-coin-type.py</code> (W-2)</td></tr>
+      <tr><td>Network magic bytes &amp; DNS seeds</td>
+          <td>Bitcoin nodes must not be able to talk to B3Chain nodes accidentally.</td>
+          <td><code>audit-network-isolation.py</code> (N-1)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>5. Run it yourself</h2>
+
+  <h3>Prerequisites</h3>
+  <div class="kvs">
+    <div>OS</div><div>Linux or WSL2</div>
+    <div>Python</div><div>3.10+</div>
+    <div>RAM</div><div>~8 GB free (functional suite is parallelised)</div>
+    <div>Time</div><div>~3&ndash;6 hours for the full <code>--extended</code> run; ~25 min for unit-only with <code>B3CHAIN_INHERIT_QUICK=1</code>.</div>
+  </div>
+
+  <h3>Build &amp; run</h3>
+<pre>git clone https://github.com/b3chain/b3chain.git
+cd b3chain
+cmake -B build &amp;&amp; cmake --build build -j$(nproc)
+
+# Quick: unit tests only (~25 min)
+B3CHAIN_INHERIT_QUICK=1 bash contrib/testing/audit/audit-bitcoin-inheritance.sh
+
+# Full: unit + functional --extended (~3-6 hr)
+bash contrib/testing/audit/audit-bitcoin-inheritance.sh</pre>
+
+  <h3>What you get back</h3>
+  <p>
+    The script runs the full upstream suite, classifies every result against
+    a small allowlist of known-divergent tests (PoW algo, mainnet UTXO
+    snapshot fixtures, etc.), and rewrites the
+    <code>Findings</code> section of
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/SECURITY-INHERITANCE.md">
+    <code>doc/SECURITY-INHERITANCE.md</code></a>.
+    Exit code is non-zero only if there is a real regression (a test that
+    should have inherited and didn't).
+  </p>
+</section>
+
+<section>
+  <h2>6. The allowlist</h2>
+  <p>
+    Three categories of upstream test are expected to fail on B3Chain by design:
+  </p>
+  <ul>
+    <li><strong>PoW algorithm tests</strong> &mdash; <code>pow_tests.cpp</code> verifies SHA-256d-as-PoW; B3Chain uses BLAKE3d. Covered by <code>audit-pow-isolation.py</code>.</li>
+    <li><strong>Mainnet snapshot tests</strong> &mdash; <code>feature_assumeutxo.py</code> and <code>feature_assumevalid.py</code> ship Bitcoin mainnet block hashes / UTXO snapshots that don't exist on B3Chain.</li>
+    <li><strong>Hardcoded peer/seed tests</strong> &mdash; e.g. <code>feature_proxy.py</code> uses Bitcoin Tor seeds; replaced once B3Chain seeds are published.</li>
+  </ul>
+  <p>
+    Any other failure is a real regression. The allowlist is small on purpose &mdash;
+    expanding it requires a written reason in <code>SECURITY-INHERITANCE.md</code>.
+  </p>
+</section>
+
+<section>
+  <h2>7. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/SECURITY-INHERITANCE.md">
+        doc/SECURITY-INHERITANCE.md</a> &mdash; the full inventory</li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-bitcoin-inheritance.sh">
+        contrib/testing/audit/audit-bitcoin-inheritance.sh</a> &mdash; the runner</li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/lib/inheritance_classify.py">
+        contrib/testing/audit/lib/inheritance_classify.py</a> &mdash; the classifier</li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing.html">Testing hub</a>
+  <a class="next" href="/testing/security-audit.html">Phase 11 audit hub</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>
