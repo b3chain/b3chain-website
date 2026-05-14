@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; Testnet</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  Testnet
+</div>
+
+<header>
+  <h1>B3Chain Testnet</h1>
+  <p class="subtitle">
+    The B3Chain public test network. Anyone can run a node, request
+    free test coins from the faucet, mine blocks with the reference
+    CPU miner, and watch the chain in the explorer. Test B3C has
+    <b>no monetary value</b>; this network exists to soak-test the
+    consensus rules and BLAKE3 PoW pipeline before mainnet launch.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Phase: <b>8a bootstrap</b></span>
+    <span class="pill">Status: <b><span class="status-pass">live</span></b></span>
+    <span class="pill">Default port: <b>18533 (P2P)</b></span>
+  </div>
+  <div class="warn">
+    <b>This is a test network.</b> Coins are valueless. The chain may
+    be reset without notice if a critical bug is found.
+  </div>
+</header>
+
+<div class="content">
+
+<!-- ================================================================ -->
+<section id="connect">
+  <h2>1. Connect a node <a class="anchor" href="#connect">#</a></h2>
+  <p>
+    Build (or download) <code>b3chaind</code> from
+    <a href="https://github.com/b3chain/b3chain">github.com/b3chain/b3chain</a>
+    on the <code>b3chain-main</code> branch (or any released
+    <code>v0.1.x-testnet</code> tag), then run:
+  </p>
+<pre>b3chaind -chain=test</pre>
+  <p>
+    That's it. The DNS seed at <code>testnet-seed.b3chain.org</code>
+    returns the operator-run seed nodes; your node will connect and
+    start syncing the chain.
+  </p>
+
+  <h3>Connection parameters</h3>
+  <table>
+    <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Chain name</td><td><code>test</code></td></tr>
+      <tr><td>Magic bytes</td><td><code>b3 c1 02 0e</code></td></tr>
+      <tr><td>P2P port</td><td><code>18533</code></td></tr>
+      <tr><td>Default RPC port</td><td><code>18534</code></td></tr>
+      <tr><td>Bech32 HRP</td><td><code>tb3</code></td></tr>
+      <tr><td>HD coin_type</td><td><code>1</code> (BIP44 testnet)</td></tr>
+      <tr><td>Genesis hash</td><td><code>8c61fcbc6249f2518010fabc1589f91d35378f48757ef97323e8cb401103ae64</code></td></tr>
+      <tr><td>DNS seed</td><td><code>testnet-seed.b3chain.org</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================================================================ -->
+<section id="faucet">
+  <h2>2. Get test coins <a class="anchor" href="#faucet">#</a></h2>
+  <p>
+    Generate a new bech32 address with your wallet:
+  </p>
+<pre>b3chain-cli -chain=test getnewaddress "" bech32
+# returns tb3...</pre>
+  <p>
+    Paste it into the faucet at
+    <a href="https://faucet.b3chain.org">faucet.b3chain.org</a>.
+    The faucet hands out 0.5 tB3C per request, with a 24-hour
+    cooldown per IP and per destination address.
+  </p>
+  <p>
+    The faucet is a small Flask service in the public source tree:
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testnet/faucet/app.py">contrib/testnet/faucet/app.py</a>.
+  </p>
+</section>
+
+<!-- ================================================================ -->
+<section id="explorer">
+  <h2>3. Explore the chain <a class="anchor" href="#explorer">#</a></h2>
+  <p>
+    A live block explorer is at
+    <a href="https://explorer.b3chain.org">explorer.b3chain.org</a>.
+    It is a deployment of
+    <a href="https://github.com/janoside/btc-rpc-explorer">btc-rpc-explorer</a>
+    pointed at one of the operator-run testnet nodes &mdash; nothing
+    custom, so any compatible explorer can do the same.
+  </p>
+  <p>
+    Programmatic status is available as plain text at
+    <a href="/testnet-status.txt">/testnet-status.txt</a>.
+  </p>
+</section>
+
+<!-- ================================================================ -->
+<section id="mine">
+  <h2>4. Mine blocks <a class="anchor" href="#mine">#</a></h2>
+  <p>
+    Anyone can mine on testnet. The reference CPU miner from Phase 6
+    works as-is &mdash; it talks to your local node via JSON-RPC and
+    submits valid blocks via <code>submitblock</code>.
+  </p>
+<pre>pip install blake3
+b3chain-cli -chain=test getnewaddress "" bech32
+# tb3...your-address...
+
+python3 contrib/miner/b3chain-cpuminer.py \
+    --rpcconnect=127.0.0.1 \
+    --rpcport=18534 \
+    --rpcuser=USER \
+    --rpcpassword=PASS \
+    --coinbaseaddr=tb3...your-address...</pre>
+  <p>
+    Testnet uses an early-difficulty-guard regime for the first
+    10000 blocks (<code>nEarlyDifficultyGuardHeight</code> in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/kernel/chainparams.cpp">src/kernel/chainparams.cpp</a>),
+    so a single CPU thread can produce blocks at roughly the
+    10-minute target.
+  </p>
+</section>
+
+<!-- ================================================================ -->
+<section id="ops">
+  <h2>5. Operator notes <a class="anchor" href="#ops">#</a></h2>
+  <p>
+    The seed network is intentionally small at bootstrap: one
+    operator-run node on the existing project server, plus two
+    smaller nodes in different geographic regions for redundancy.
+    Anyone can join at any time &mdash; just run
+    <code>b3chaind -chain=test</code>.
+  </p>
+
+  <h3>Repository layout</h3>
+  <table>
+    <thead><tr><th>Path</th><th>What's there</th></tr></thead>
+    <tbody>
+      <tr><td><code>contrib/deploy/bootstrap-testnet-node.sh</code></td>
+          <td>Idempotent script: fresh Ubuntu host &rarr; running b3chaind testnet under systemd</td></tr>
+      <tr><td><code>contrib/testnet/faucet/</code></td>
+          <td>Flask faucet + systemd unit + installer</td></tr>
+      <tr><td><code>contrib/testnet/miner/</code></td>
+          <td>Always-on CPU miner systemd unit + installer</td></tr>
+      <tr><td><code>contrib/testnet/explorer/</code></td>
+          <td>btc-rpc-explorer Docker installer</td></tr>
+      <tr><td><code>contrib/testnet/monitor/</code></td>
+          <td>Cron-driven seed status snapshot ⇒ <code>/testnet-status.txt</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================================================================ -->
+<section id="bugs">
+  <h2>6. Found a bug? <a class="anchor" href="#bugs">#</a></h2>
+  <p>
+    Testnet bugs are exactly what we want before mainnet. Report any
+    consensus oddity, reorg longer than 2 blocks, sync stall, RPC
+    inconsistency, or wallet weirdness via the channels described in
+    <a href="/testing/reporting.html">/testing/reporting.html</a>.
+    Include the testnet block height, your node version
+    (<code>getnetworkinfo</code>), and the journal log
+    (<code>journalctl -u b3chaind-testnet --since '1 hour ago'</code>).
+  </p>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing.html">Back to testing hub</a>
+  <a class="next" href="/testing/security-audit.html">Phase 11 audits</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>
