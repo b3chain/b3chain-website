@@ -1,0 +1,12 @@
+# B3Chain security disclosure policy (RFC 9116).
+# Programme details: https://github.com/b3chain/b3chain/blob/b3chain-main/security/bug-bounty.md
+
+Contact: mailto:security@b3chain.org
+Contact: https://github.com/b3chain/b3chain/blob/b3chain-main/security/bug-bounty.md
+Expires: 2027-05-19T23:59:59Z
+Encryption: https://b3chain.org/pgp/security-pgp.txt
+Preferred-Languages: en
+Canonical: https://b3chain.org/.well-known/security.txt
+Policy: https://github.com/b3chain/b3chain/blob/b3chain-main/security/bug-bounty.md
+Acknowledgments: https://github.com/b3chain/b3chain/blob/b3chain-main/security/bug-bounty.md#hall-of-fame
+Hiring: https://b3chain.org/careers
