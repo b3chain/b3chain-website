@@ -7,6 +7,77 @@
   <title>b3chain &mdash; Testnet</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    /* Scoped styles for the live-status panel. The grid + card+kv
+       primitives reuse the variables from /css/style.css. */
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .status-card {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .status-card .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .status-card .value {
+      font-family: var(--mono);
+      font-size: 18px;
+      color: var(--text);
+      overflow-wrap: anywhere;
+    }
+    .status-card .sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .status-card.bad .value { color: var(--fail); }
+    .status-card.warn { border-color: var(--warn-border); background: var(--warn-bg); }
+
+    .status-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .status-meta .stale { color: var(--fail); font-weight: 600; }
+    .status-meta .live  { color: var(--pass); font-weight: 600; }
+
+    .recent-blocks {
+      width: 100%;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    .recent-blocks th { text-align: left; padding: 6px 8px;
+                        border-bottom: 1px solid var(--line);
+                        color: var(--muted); font-size: 11px;
+                        text-transform: uppercase; letter-spacing: .04em; }
+    .recent-blocks td { padding: 6px 8px; border-bottom: 1px dashed var(--line);
+                        font-family: var(--mono); font-size: 12px; }
+    .recent-blocks td.height { font-weight: 600; }
+    .recent-blocks td.hash   { font-size: 11.5px; color: var(--muted);
+                               max-width: 280px; overflow: hidden;
+                               text-overflow: ellipsis; white-space: nowrap; }
+    @media (max-width: 540px) {
+      .recent-blocks .hide-narrow { display: none; }
+    }
+
+    .pillrow { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; }
+    .pillrow a.pill { text-decoration: none; }
+    .pillrow a.pill:hover { border-color: var(--accent); color: var(--text); }
+  </style>
 </head>
 
 <body>
@@ -22,14 +93,22 @@
   <p class="subtitle">
     The B3Chain public test network. Anyone can run a node, request
     free test coins from the faucet, mine blocks with the reference
-    CPU miner, and watch the chain in the explorer. Test B3C has
-    <b>no monetary value</b>; this network exists to soak-test the
-    consensus rules and B3PoW-Scratch v1.1 PoW pipeline before mainnet launch.
+    CPU miner or the public Stratum pool, and watch the chain in the
+    explorer. Test B3C has <b>no monetary value</b>; this network
+    exists to soak-test the consensus rules and B3PoW-Scratch v1.1 PoW
+    pipeline before mainnet launch.
   </p>
   <div class="tagrow">
     <span class="pill">Phase: <b>8a bootstrap</b></span>
     <span class="pill">Status: <b><span class="status-pass">live</span></b></span>
-    <span class="pill">Default port: <b>18533 (P2P)</b></span>
+    <span class="pill">P2P port: <b>18533</b></span>
+    <span class="pill">Pool: <b>pool.b3chain.org:3333</b></span>
+  </div>
+  <div class="pillrow">
+    <a class="pill" href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/testnet-runbook.md">Full runbook &rarr;</a>
+    <a class="pill" href="https://explorer.b3chain.org">Explorer &rarr;</a>
+    <a class="pill" href="https://faucet.b3chain.org">Faucet &rarr;</a>
+    <a class="pill" href="https://pool.b3chain.org">Pool dashboard &rarr;</a>
   </div>
   <div class="warn">
     <b>This is a test network.</b> Coins are valueless. The chain may
@@ -38,6 +117,63 @@
 </header>
 
 <div class="content">
+
+<!-- ================================================================ -->
+<section id="status">
+  <h2>Live status <a class="anchor" href="#status">#</a></h2>
+  <p>
+    Poll of <a href="/testnet-status.json"><code>/testnet-status.json</code></a>,
+    refreshed every 60&nbsp;seconds. The exporter source is
+    <a href="https://github.com/b3chain/b3chain/tree/b3chain-main/contrib/testnet/status-monitor"><code>contrib/testnet/status-monitor/</code></a>.
+    Cards show &ldquo;n/a&rdquo; when the corresponding upstream is
+    unreachable; the whole panel turns warning-yellow when the JSON is
+    more than 5&nbsp;minutes stale.
+  </p>
+
+  <div class="status-grid" id="status-grid">
+    <div class="status-card"><div class="label">Block height</div>
+      <div class="value" data-status="node.height">&hellip;</div>
+      <div class="sub" data-status="node.best_block_time_age">&nbsp;</div></div>
+    <div class="status-card"><div class="label">Difficulty</div>
+      <div class="value" data-status="node.difficulty">&hellip;</div>
+      <div class="sub">LWMA-3</div></div>
+    <div class="status-card"><div class="label">Network hashrate</div>
+      <div class="value" data-status="network.hashrate_estimate_hps">&hellip;</div>
+      <div class="sub" data-status="network.actual_recent_interval_s">&nbsp;</div></div>
+    <div class="status-card"><div class="label">Peers seen by seed1</div>
+      <div class="value" data-status="node.peer_count">&hellip;</div>
+      <div class="sub">getnetworkinfo connections</div></div>
+    <div class="status-card"><div class="label">Pool</div>
+      <div class="value" data-status="pool.online">&hellip;</div>
+      <div class="sub" data-status="pool.connected_workers">&nbsp;</div></div>
+    <div class="status-card"><div class="label">Pool blocks (24&nbsp;h)</div>
+      <div class="value" data-status="pool.blocks_found_24h">&hellip;</div>
+      <div class="sub" data-status="pool.last_block_height">&nbsp;</div></div>
+    <div class="status-card"><div class="label">Faucet</div>
+      <div class="value" data-status="faucet.online">&hellip;</div>
+      <div class="sub" data-status="faucet.balance_satoshis">&nbsp;</div></div>
+    <div class="status-card"><div class="label">Best block hash</div>
+      <div class="value" data-status="node.best_block_hash" style="font-size:11.5px">&hellip;</div>
+      <div class="sub">SHA-256d block ID</div></div>
+  </div>
+
+  <h3>Last 5 blocks</h3>
+  <table class="recent-blocks" id="recent-blocks">
+    <thead><tr>
+      <th>Height</th><th>Age</th><th class="hide-narrow">Hash</th>
+      <th>Tx</th><th class="hide-narrow">Size</th>
+    </tr></thead>
+    <tbody><tr><td colspan="5" class="muted">loading&hellip;</td></tr></tbody>
+  </table>
+
+  <div class="status-meta">
+    <span>Generated at <span id="status-generated">&hellip;</span>
+          <span id="status-age"></span></span>
+    <span>Auto-refresh every 60 s &middot;
+          <a href="/testnet-status.json">raw JSON</a> &middot;
+          <a href="/testnet-status.txt">plain text</a></span>
+  </div>
+</section>
 
 <!-- ================================================================ -->
 <section id="connect">
@@ -51,8 +187,14 @@
 <pre>b3chaind -chain=test</pre>
   <p>
     That's it. The DNS seed at <code>testnet-seed.b3chain.org</code>
-    returns the operator-run seed nodes; your node will connect and
-    start syncing the chain.
+    returns the operator-run seed nodes
+    (seed1 = <code>166.88.4.250</code>,
+     seed2 = <code>151.158.1.22</code>,
+     seed3 = <code>151.158.1.60</code>);
+    your node will connect and start syncing the chain. See the
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/testnet-runbook.md#2-network-parameters">runbook
+    §2</a> for the recommended <code>b3chain.conf</code> with explicit
+    <code>addnode=</code> lines.
   </p>
 
   <h3>Connection parameters</h3>
@@ -65,7 +207,7 @@
       <tr><td>Default RPC port</td><td><code>18534</code></td></tr>
       <tr><td>Bech32 HRP</td><td><code>tb3</code></td></tr>
       <tr><td>HD coin_type</td><td><code>1</code> (BIP44 testnet)</td></tr>
-      <tr><td>Genesis hash</td><td><code>8c61fcbc6249f2518010fabc1589f91d35378f48757ef97323e8cb401103ae64</code></td></tr>
+      <tr><td>Genesis hash</td><td><code class="hash">4b3f758b306086eca0a95c68020ab74cb87c652b1788780fa3235306bb3d4006</code></td></tr>
       <tr><td>DNS seed</td><td><code>testnet-seed.b3chain.org</code></td></tr>
     </tbody>
   </table>
@@ -82,12 +224,14 @@
   <p>
     Paste it into the faucet at
     <a href="https://faucet.b3chain.org">faucet.b3chain.org</a>.
-    The faucet hands out 0.5 tB3C per request, with a 24-hour
-    cooldown per IP and per destination address.
+    The faucet hands out <code>0.5</code> tB3C per request, with a
+    24-hour cooldown per IP and per destination address. A JSON
+    status endpoint is at
+    <a href="https://faucet.b3chain.org/status"><code>/status</code></a>.
   </p>
   <p>
     The faucet is a small Flask service in the public source tree:
-    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testnet/faucet/app.py">contrib/testnet/faucet/app.py</a>.
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testnet/faucet/app.py"><code>contrib/testnet/faucet/app.py</code></a>.
   </p>
 </section>
 
@@ -103,20 +247,32 @@
     custom, so any compatible explorer can do the same.
   </p>
   <p>
-    Programmatic status is available as plain text at
-    <a href="/testnet-status.txt">/testnet-status.txt</a>.
+    Programmatic status feeds:
   </p>
+  <ul>
+    <li><a href="/testnet-status.json"><code>/testnet-status.json</code></a>
+        &mdash; structured live status (the panel above), updated every 60&nbsp;s</li>
+    <li><a href="/testnet-status.txt"><code>/testnet-status.txt</code></a>
+        &mdash; human-readable seed snapshot</li>
+    <li>Explorer API: <code>https://explorer.b3chain.org/api/blocks</code> et al.
+        (see <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/testnet-runbook.md#9-block-explorer">runbook §9</a>)</li>
+  </ul>
 </section>
 
 <!-- ================================================================ -->
 <section id="mine">
   <h2>4. Mine blocks <a class="anchor" href="#mine">#</a></h2>
   <p>
-    Anyone can mine on testnet. The reference CPU miner from Phase 6
-    works as-is &mdash; it talks to your local node via JSON-RPC and
-    submits valid blocks via <code>submitblock</code>.
+    Three options, in increasing order of hashrate:
   </p>
-<pre>pip install blake3                              # required by b3pow_ref (ships in contrib/miner/b3miner-rtl/ref/)
+
+  <h3>Solo mining with the reference CPU miner</h3>
+  <p>
+    Anyone can mine on testnet. The reference CPU miner talks to your
+    local node via JSON-RPC and submits valid blocks via
+    <code>submitblock</code>.
+  </p>
+<pre>pip install blake3                              # required by the B3PoW-Scratch Python reference
 b3chain-cli -chain=test getnewaddress "" bech32
 # tb3...your-address...
 
@@ -127,11 +283,45 @@ python3 contrib/miner/b3chain-cpuminer.py \
     --rpcpassword=PASS \
     --coinbaseaddr=tb3...your-address...</pre>
   <p>
-    Testnet uses an early-difficulty-guard regime for the first
-    10000 blocks (<code>nEarlyDifficultyGuardHeight</code> in
+    Testnet uses an early-difficulty-guard regime for the first 10&nbsp;000
+    blocks (<code>nEarlyDifficultyGuardHeight</code> in
     <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/kernel/chainparams.cpp">src/kernel/chainparams.cpp</a>),
     so a single CPU thread can produce blocks at roughly the
     10-minute target.
+  </p>
+
+  <h3>Pool mining via Stratum</h3>
+  <p>
+    The public pool at
+    <code>stratum+tcp://pool.b3chain.org:3333</code> validates every
+    share against the canonical B3PoW-Scratch v1.1 algorithm exactly
+    the way <code>b3chaind</code> does. Reward scheme is PPLNS over
+    the last 4032 weighted shares; pool fee is 1%. Usernames are
+    <code>&lt;email&gt;.&lt;workerName&gt;</code> for verified accounts
+    at <a href="https://pool.b3chain.org">pool.b3chain.org</a>, or
+    <code>&lt;tb3address&gt;.&lt;workerName&gt;</code> for anonymous
+    miners.
+  </p>
+<pre>python3 contrib/miner/b3chain-cpuminer.py \
+    --stratum stratum+tcp://pool.b3chain.org:3333 \
+    --user alice@example.com.cpu1 --pass x \
+    --threads 2 --json-log shares.jsonl</pre>
+  <p>
+    Worker name / share format / vardiff / payout policy are
+    documented in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/testnet-runbook.md#7-mine-via-stratum-on-the-public-pool">runbook §7</a>.
+    The wire-protocol implementer contract is in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testnet/pool/docs/STRATUM-PROTOCOL.md">contrib/testnet/pool/docs/STRATUM-PROTOCOL.md</a>.
+  </p>
+
+  <h3>B3Miner-1 FPGA</h3>
+  <p>
+    The B3Miner-1 reference FPGA mining card (XCKU5P + ESP32-S3 +
+    Ethernet) is the intended high-end miner for B3PoW-Scratch. Build
+    and flash instructions are in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-firmware/README.md">contrib/miner/b3miner-firmware/README.md</a>.
+    Point the card at the same Stratum endpoint above; the
+    onboard dashboard handles the credentials.
   </p>
 </section>
 
@@ -140,9 +330,10 @@ python3 contrib/miner/b3chain-cpuminer.py \
   <h2>5. Operator notes <a class="anchor" href="#ops">#</a></h2>
   <p>
     The seed network is intentionally small at bootstrap: one
-    operator-run node on the existing project server, plus two
-    smaller nodes in different geographic regions for redundancy.
-    Anyone can join at any time &mdash; just run
+    operator-run host (seed1) carries the pool, faucet, explorer, and
+    status monitor in addition to <code>b3chaind</code>; seed2 and
+    seed3 are seed-only nodes in different geographic regions for
+    redundancy. Anyone can join at any time &mdash; just run
     <code>b3chaind -chain=test</code>.
   </p>
 
@@ -156,10 +347,14 @@ python3 contrib/miner/b3chain-cpuminer.py \
           <td>Flask faucet + systemd unit + installer</td></tr>
       <tr><td><code>contrib/testnet/miner/</code></td>
           <td>Always-on CPU miner systemd unit + installer</td></tr>
+      <tr><td><code>contrib/testnet/pool/</code></td>
+          <td>Reference Stratum V1/V2 pool stack (Node/TypeScript)</td></tr>
       <tr><td><code>contrib/testnet/explorer/</code></td>
           <td>btc-rpc-explorer (Node.js + systemd) installer with B3C rebrand patches</td></tr>
+      <tr><td><code>contrib/testnet/status-monitor/</code></td>
+          <td>Python exporter feeding <code>/testnet-status.json</code> (this page)</td></tr>
       <tr><td><code>contrib/testnet/monitor/</code></td>
-          <td>Cron-driven seed status snapshot ⇒ <code>/testnet-status.txt</code></td></tr>
+          <td>Cron-driven seed status snapshot &rArr; <code>/testnet-status.txt</code></td></tr>
     </tbody>
   </table>
 </section>
@@ -171,16 +366,19 @@ python3 contrib/miner/b3chain-cpuminer.py \
     Testnet bugs are exactly what we want before mainnet. Report any
     consensus oddity, reorg longer than 2 blocks, sync stall, RPC
     inconsistency, or wallet weirdness via the channels described in
-    <a href="/testing/reporting.html">/testing/reporting.html</a>.
+    <a href="/testing/reporting.html">/testing/reporting.html</a>, or
+    file an issue directly at
+    <a href="https://github.com/b3chain/b3chain/issues">github.com/b3chain/b3chain/issues</a>.
     Include the testnet block height, your node version
     (<code>getnetworkinfo</code>), and the journal log
     (<code>journalctl -u b3chaind-testnet --since '1 hour ago'</code>).
+    Security disclosures go to <code>security@b3chain.org</code>.
   </p>
 </section>
 
 <div class="page-nav">
   <a class="prev" href="/testing.html">Back to testing hub</a>
-  <a class="next" href="/testing/security-audit.html">Phase 11 audits</a>
+  <a class="next" href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/testnet-runbook.md">Full operator runbook</a>
 </div>
 
 </div>
@@ -191,5 +389,174 @@ python3 contrib/miner/b3chain-cpuminer.py \
 
 </div>
 <script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+
+<script>
+// =====================================================================
+// Live testnet status panel.
+// Polls /testnet-status.json every 60s, fills the cards above, and
+// degrades gracefully when fields / upstreams / the whole file are
+// missing or stale.
+// =====================================================================
+(function () {
+  var STATUS_URL = "/testnet-status.json";
+  var STALE_AFTER_MS = 5 * 60 * 1000;
+  var REFRESH_MS = 60 * 1000;
+
+  function $(sel)   { return document.querySelector(sel); }
+  function $$(sel)  { return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+  function get(obj, path) {
+    var parts = path.split(".");
+    for (var i = 0; i < parts.length && obj != null; i++) obj = obj[parts[i]];
+    return obj;
+  }
+
+  function fmtNum(n) {
+    if (n == null || isNaN(n)) return "n/a";
+    if (n >= 1e12) return (n / 1e12).toFixed(2) + " T";
+    if (n >= 1e9)  return (n / 1e9 ).toFixed(2) + " G";
+    if (n >= 1e6)  return (n / 1e6 ).toFixed(2) + " M";
+    if (n >= 1e3)  return (n / 1e3 ).toFixed(2) + " k";
+    if (n >= 1)    return n.toFixed(2);
+    return n.toExponential(2);
+  }
+  function fmtHps(n) {
+    if (n == null || isNaN(n)) return "n/a";
+    return fmtNum(n) + "H/s";
+  }
+  function fmtSats(s) {
+    if (s == null || isNaN(s)) return "n/a";
+    return (s / 1e8).toFixed(4) + " tB3C";
+  }
+  function fmtAge(seconds) {
+    if (seconds == null || isNaN(seconds)) return "";
+    seconds = Math.max(0, Math.floor(seconds));
+    if (seconds < 90)    return seconds + " s ago";
+    if (seconds < 5400)  return Math.round(seconds / 60) + " min ago";
+    if (seconds < 86400) return (seconds / 3600).toFixed(1) + " h ago";
+    return (seconds / 86400).toFixed(1) + " d ago";
+  }
+  function fmtHash(h) {
+    if (!h) return "n/a";
+    return h.length > 16 ? h.slice(0, 12) + "…" + h.slice(-6) : h;
+  }
+  function setCard(key, value, sub, isBad) {
+    var v = document.querySelector('[data-status="' + key + '"]');
+    if (!v) return;
+    v.textContent = value;
+    var card = v.closest(".status-card");
+    if (card) card.classList.toggle("bad", !!isBad);
+    var subEl = card && card.querySelector('.sub[data-status="' + key + '"]');
+    if (subEl && sub != null) subEl.textContent = sub;
+  }
+
+  function render(doc, fetchedAt) {
+    var generated = doc.generated_at ? new Date(doc.generated_at + "") : null;
+    var generatedMs = generated ? generated.getTime() : null;
+    var stale = !generatedMs || (fetchedAt - generatedMs) > STALE_AFTER_MS;
+
+    // -- header cards --
+    var h = get(doc, "node.height");
+    setCard("node.height", h == null ? "n/a" : h.toLocaleString());
+
+    var bestTime = get(doc, "node.best_block_time");
+    if (bestTime) {
+      setCard("node.best_block_time_age",
+              "tip: " + fmtAge((fetchedAt - bestTime * 1000) / 1000));
+    } else {
+      setCard("node.best_block_time_age", "");
+    }
+
+    var diff = get(doc, "node.difficulty");
+    setCard("node.difficulty", diff == null ? "n/a" : fmtNum(diff));
+
+    setCard("network.hashrate_estimate_hps",
+            fmtHps(get(doc, "network.hashrate_estimate_hps")));
+    var ari = get(doc, "network.actual_recent_interval_s");
+    setCard("network.actual_recent_interval_s",
+            ari == null ? "target 600 s" : "recent " + ari.toFixed(0) + " s avg");
+
+    var peers = get(doc, "node.peer_count");
+    setCard("node.peer_count", peers == null ? "n/a" : peers);
+
+    var poolOnline = get(doc, "pool.online");
+    setCard("pool.online", poolOnline ? "online" : "offline", null, !poolOnline);
+    var workers = get(doc, "pool.connected_workers");
+    setCard("pool.connected_workers",
+            workers == null ? "" : workers + " connected worker" + (workers === 1 ? "" : "s"));
+
+    var blocks24 = get(doc, "pool.blocks_found_24h");
+    setCard("pool.blocks_found_24h", blocks24 == null ? "n/a" : blocks24);
+    var lastBlock = get(doc, "pool.last_block_height");
+    setCard("pool.last_block_height", lastBlock == null ? "" : "last @ #" + lastBlock);
+
+    var faucetOnline = get(doc, "faucet.online");
+    setCard("faucet.online", faucetOnline ? "online" : "offline", null, !faucetOnline);
+    setCard("faucet.balance_satoshis", fmtSats(get(doc, "faucet.balance_satoshis")));
+
+    var bestHash = get(doc, "node.best_block_hash");
+    setCard("node.best_block_hash", bestHash ? bestHash : "n/a");
+
+    // -- recent blocks table --
+    var tbody = $("#recent-blocks tbody");
+    var rb = doc.recent_blocks || [];
+    if (!rb.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="muted">n/a</td></tr>';
+    } else {
+      tbody.innerHTML = "";
+      rb.slice(0, 5).forEach(function (b) {
+        var tr = document.createElement("tr");
+        var age = b.time ? fmtAge((fetchedAt - b.time * 1000) / 1000) : "?";
+        tr.innerHTML =
+          '<td class="height">' + (b.height == null ? "?" : b.height) + '</td>' +
+          '<td>' + age + '</td>' +
+          '<td class="hash hide-narrow">' + fmtHash(b.hash) + '</td>' +
+          '<td>' + (b.tx_count == null ? "?" : b.tx_count) + '</td>' +
+          '<td class="hide-narrow">' + (b.size_bytes == null ? "?" : b.size_bytes + " B") + '</td>';
+        tbody.appendChild(tr);
+      });
+    }
+
+    // -- footer meta --
+    $("#status-generated").textContent =
+      generated ? generated.toISOString().replace("T", " ").replace(/\..+$/, " UTC")
+                : "n/a";
+    var age = $("#status-age");
+    if (stale) {
+      age.innerHTML = ' &middot; <span class="stale">stale ('
+                    + (generatedMs ? fmtAge((fetchedAt - generatedMs) / 1000) : "no data")
+                    + ')</span>';
+    } else {
+      age.innerHTML = ' &middot; <span class="live">fresh</span>';
+    }
+  }
+
+  function renderUnreachable(err) {
+    // The exporter or nginx is unreachable; mark everything n/a and
+    // surface the error in the meta line. Don't blow up the page.
+    $$('.status-card [data-status]').forEach(function (v) {
+      if (v.classList.contains("value")) v.textContent = "n/a";
+    });
+    $$('.status-card').forEach(function (c) { c.classList.add("warn"); });
+    $("#recent-blocks tbody").innerHTML =
+      '<tr><td colspan="5" class="muted">status feed unreachable</td></tr>';
+    $("#status-generated").textContent = "n/a";
+    $("#status-age").innerHTML =
+      ' &middot; <span class="stale">' + (err || "unreachable") + '</span>';
+  }
+
+  function refresh() {
+    fetch(STATUS_URL + "?t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function (doc) { render(doc, Date.now()); })
+      .catch(function (e) { renderUnreachable((e && e.message) || "unreachable"); });
+  }
+  refresh();
+  setInterval(refresh, REFRESH_MS);
+})();
+</script>
+
 </body>
 </html>
