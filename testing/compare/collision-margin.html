@@ -107,11 +107,16 @@
     <li><b>Block / tx ID hashing</b>. <code>SHA-256d</code> unchanged. The
         MD construction does not leak via length extension because the
         inner hash normalises the input.</li>
-    <li><b>PoW hashing</b>. <code>BLAKE3d</code>. Same shape as SHA-256d
-        but using BLAKE3's tree construction. The double-hash is
-        technically redundant for length-extension (BLAKE3 doesn't have
-        it) but kept for symmetry with the Bitcoin protocol layout and as
-        defence-in-depth.</li>
+    <li><b>PoW hashing</b>. <b>B3PoW-Scratch v1.1</b>: a 1&nbsp;MB
+        memory-hard scratchpad walked by 8 lanes of BLAKE3 with 2048
+        outer iterations, finalised by a single BLAKE3 over the lane
+        state. See
+        <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">SPEC.md</a>
+        and the PoW-level comparison at
+        <a href="b3pow-vs-sha256d.html">B3PoW-Scratch vs SHA-256d</a>.
+        The BLAKE3 primitive is used as the inner round function; the
+        construction itself is parallel, memory-hard, and deliberately
+        incompatible with the bare BLAKE3 / SHA-256 ASIC market.</li>
     <li><b>Future MAC / KDF</b>. When B3Chain needs a keyed primitive
         (e.g. peer-id derivation, BIP324 negotiation, Lightning HTLC
         secrets), use BLAKE3's built-in <code>keyed_hash</code> and

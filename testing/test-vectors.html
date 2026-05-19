@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>b3chain &mdash; BLAKE3 Test Vectors</title>
+  <title>b3chain &mdash; B3PoW-Scratch Consensus Vectors</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
@@ -15,126 +15,175 @@
 <div class="nav">
   <a href="/index.html">b3chain</a> /
   <a href="/testing.html">Testing &amp; Verification</a> /
-  BLAKE3 Test Vectors
+  B3PoW-Scratch Consensus Vectors
 </div>
 
 <header>
-  <h1>BLAKE3 Test Vectors</h1>
+  <h1>B3PoW-Scratch Consensus Vectors</h1>
   <p class="subtitle">
-    Canonical input/output pairs for BLAKE3-256 and the double-hash
-    construction used by the b3chain proof-of-work. Use these to test any
-    independent miner, hardware accelerator, or alternative client.
+    Canonical <code>(header, prev_block_hash)</code> &rarr;
+    <code>pow_hash</code> pairs that pin the C++ port to the Python
+    reference. Use these to validate any independent
+    B3PoW-Scratch&nbsp;v1.1 implementation &mdash; alternative client,
+    hardware miner, or FPGA / RTL port.
   </p>
 </header>
 
 <div class="content">
 
 <section>
-  <h2>1. Single BLAKE3-256</h2>
+  <h2>1. Algorithm under test</h2>
+  <div class="kvs">
+    <div>Algorithm</div><div><b>B3PoW-Scratch v1.1</b></div>
+    <div>SPEC_VERSION</div><div><code>0x00010100</code></div>
+    <div>Scratchpad size</div><div>1 048 576 bytes (1&nbsp;MiB) per parent</div>
+    <div>Lanes</div><div>8</div>
+    <div>Outer iterations</div><div>2048</div>
+    <div>Inner BLAKE3 rounds / iter</div><div>2</div>
+    <div>Inner round function</div><div>BLAKE3</div>
+    <div>Verifier wall-clock budget</div><div>50&nbsp;ms (consensus parameter)</div>
+    <div>Spec</div><div><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">contrib/miner/b3miner-rtl/SPEC.md</a></div>
+  </div>
+</section>
+
+<section>
+  <h2>2. Vector set</h2>
+  <p>
+    The complete machine-readable set lives at
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/test/data/b3pow_consensus_vectors.json">
+    <code>src/test/data/b3pow_consensus_vectors.json</code></a>; the
+    table below summarises the entries. All hex values are big-endian
+    display order (block-explorer style).
+  </p>
+
   <table>
     <thead>
-      <tr><th>Input (UTF-8)</th><th>Length</th><th>BLAKE3-256 (hex)</th></tr>
+      <tr>
+        <th>Name</th>
+        <th>Purpose</th>
+        <th>prev_block_hash (hex)</th>
+        <th>expected pow_hash (hex)</th>
+      </tr>
     </thead>
     <tbody>
       <tr>
-        <td><code>(empty)</code></td><td>0</td>
-        <td class="hash">af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262</td>
+        <td><code>genesis_mainnet_template</code></td>
+        <td>locks the JSON schema against the mainnet genesis-style header</td>
+        <td class="hash">000...000</td>
+        <td class="hash">c25b21f44fbd8b55e512e895bd56c71837a3220eba20d7728334158f146b8530</td>
       </tr>
       <tr>
-        <td><code>abc</code></td><td>3</td>
-        <td class="hash">6437b3ac38465133ffb63b75273a8db548c558465d79db03fd359c6cd5bd9d85</td>
+        <td><code>genesis_regtest</code></td>
+        <td>regtest powLimit is loose (<code>0x207fffff</code>) so any hash passes</td>
+        <td class="hash">000...000</td>
+        <td class="hash">901975901cc50adc8321535638eff4805d3689cc74d8b68f0c2cf12d13da28e5</td>
       </tr>
       <tr>
-        <td><code>The quick brown fox jumps over the lazy dog</code></td><td>43</td>
-        <td class="hash">2f1514181aadccd913abd94cfa592701a5686ab23f8df1dff1b74710febc6d4a</td>
+        <td><code>mainnet_target_loose_pass</code></td>
+        <td>mainnet powLimit (<code>0x1e01ffff</code>) with the loose target</td>
+        <td class="hash">000...000</td>
+        <td class="hash">caf96433bf0ae33ca4b664184afcb86e76aa0a57b97ec6e215d9e5fd5f0a0e38</td>
+      </tr>
+      <tr>
+        <td><code>mainnet_target_tight_fail</code></td>
+        <td>synthetic <code>target=1</code> &mdash; expected to fail PoW with overwhelming probability</td>
+        <td class="hash">000...000</td>
+        <td class="hash">caf96433bf0ae33ca4b664184afcb86e76aa0a57b97ec6e215d9e5fd5f0a0e38</td>
+      </tr>
+      <tr>
+        <td><code>nontrivial_prev</code></td>
+        <td>same header as <code>mainnet_target_loose_pass</code>, non-zero <code>prev_block_hash</code>: pow_hash MUST differ</td>
+        <td class="hash">deadbeef...3210</td>
+        <td class="hash">4d49c9a28416ce87a137729dd152466746147e7cd7d5319a429c5aec43c98303</td>
+      </tr>
+      <tr>
+        <td><code>cache_pair_nonce_0</code></td>
+        <td>first member of a same-parent pair, exercises the LRU scratchpad cache (H-1.2)</td>
+        <td class="hash">0102...1f20</td>
+        <td class="hash">d683c6dfdc0398824c4975ae4cb105503c07018424cba1993ce9b378c667ce4b</td>
+      </tr>
+      <tr>
+        <td><code>cache_pair_nonce_1</code></td>
+        <td>second member of the cache pair (nonce=1) &mdash; C++ test asserts this is served from the cache after the first</td>
+        <td class="hash">0102...1f20</td>
+        <td class="hash">3fbf4bd5138cd80ef3eb5548e2950352d2b8ab3846e99d2f1f9b09b0b498f0ce</td>
       </tr>
     </tbody>
   </table>
+
   <p class="small">
-    These match <a href="https://github.com/BLAKE3-team/BLAKE3/blob/master/test_vectors/test_vectors.json">
-    the official BLAKE3 spec vectors</a>.
+    The two <code>cache_pair_*</code> entries deliberately share the
+    same <code>prev_block_hash</code> so the C++ unit tests in
+    <code>b3pow_cache_tests.cpp</code> can prove the LRU is doing real
+    work.
   </p>
 </section>
 
 <section>
-  <h2>2. Double BLAKE3-256 (PoW construction)</h2>
+  <h2>3. Header serialisation</h2>
   <p>
-    The b3chain PoW hash is <code>BLAKE3(BLAKE3(input))</code>, mirroring
-    Bitcoin's double-SHA256 pattern.
-  </p>
-  <table>
-    <thead>
-      <tr><th>Input (UTF-8)</th><th>Length</th><th>Double BLAKE3-256 (hex)</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>(empty)</code></td><td>0</td>
-        <td class="hash">b8e0c4d44f8caf30b9d7e5bd3636b94b4cdc89c8d39ce96a8c5d04e7d5b9b78a</td>
-      </tr>
-      <tr>
-        <td><code>Bitcoin</code></td><td>7</td>
-        <td class="hash">[verify with verify-blake3-pow.py]</td>
-      </tr>
-    </tbody>
-  </table>
-  <p class="small">
-    The exact bytes are computed by
-    <code>contrib/testing/verify-blake3-pow.py</code>; this table mirrors
-    them so you can spot-check.
-  </p>
-</section>
-
-<section>
-  <h2>3. Header-serialisation vectors</h2>
-  <p>
-    Four pre-computed b3chain regtest blocks demonstrate the full
-    serialise &rarr; double-BLAKE3 path.
+    Same 80-byte wire format as Bitcoin Core, little-endian fields,
+    used by all entries above.
   </p>
   <table>
     <thead>
       <tr><th>Field</th><th>Value</th></tr>
     </thead>
     <tbody>
-      <tr><td>nVersion</td><td><code>0x20000000</code> (BIP9 default)</td></tr>
-      <tr><td>hashPrevBlock</td><td>32 bytes (zero for genesis)</td></tr>
-      <tr><td>hashMerkleRoot</td><td>32 bytes (coinbase txid for solo blocks)</td></tr>
-      <tr><td>nTime</td><td>uint32 LE</td></tr>
-      <tr><td>nBits</td><td>compact target, e.g. <code>0x207fffff</code> on regtest</td></tr>
-      <tr><td>nNonce</td><td>uint32 LE; vary to satisfy target</td></tr>
+      <tr><td><code>nVersion</code></td><td>4 bytes, int32 LE</td></tr>
+      <tr><td><code>hashPrevBlock</code></td><td>32 bytes, uint256 LE (seeds the 1&nbsp;MB scratchpad)</td></tr>
+      <tr><td><code>hashMerkleRoot</code></td><td>32 bytes, uint256 LE</td></tr>
+      <tr><td><code>nTime</code></td><td>uint32 LE</td></tr>
+      <tr><td><code>nBits</code></td><td>compact target (e.g. <code>0x1e01ffff</code> on mainnet, <code>0x207fffff</code> on regtest)</td></tr>
+      <tr><td><code>nNonce</code></td><td>uint32 LE; the miner varies this</td></tr>
     </tbody>
   </table>
-  <p>
-    Run <code>verify-blake3-pow.py --rpc-port=...</code> to dump the
-    serialised bytes for any live block.
-  </p>
 </section>
 
 <section>
   <h2>4. How to use these vectors</h2>
   <ol>
-    <li>Encode the header fields as little-endian per the table above.</li>
-    <li>Concatenate to produce the 80-byte header.</li>
-    <li>Compute <code>BLAKE3(BLAKE3(header))</code>.</li>
-    <li>Compare to the expected PoW hash; the integer interpretation
-        (little-endian uint256) must be &le; the target derived from
-        <code>nBits</code>.</li>
+    <li>Decode the entry: <code>header_hex</code> (80&nbsp;bytes),
+        <code>prev_block_hash_hex</code> (32&nbsp;bytes), <code>nbits_hex</code>.</li>
+    <li>Initialise the scratchpad from <code>prev_block_hash</code>
+        (the algorithm seeds an XOF from that 32-byte value and fills
+        the 1&nbsp;MiB pad).</li>
+    <li>Run B3PoW-Scratch over the 80-byte header with the freshly
+        initialised pad; obtain the 32-byte <code>pow_hash</code>.</li>
+    <li>Compare to <code>expected_pow_hash_hex</code> &mdash; must
+        match byte-for-byte.</li>
+    <li>Optionally check <code>pow_hash &lt; target(nBits)</code>;
+        compare to <code>expected_check_pow</code> for parity with
+        the C++ <code>CheckProofOfWork</code>.</li>
   </ol>
 </section>
 
 <section>
   <h2>5. Source files</h2>
   <ul>
-    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/verify-blake3-pow.py">
-        contrib/testing/verify-blake3-pow.py</a></li>
-    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/primitives/block.cpp">
-        src/primitives/block.cpp</a></li>
-    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/test/audit/consensus_invariants_tests.cpp">
-        src/test/audit/consensus_invariants_tests.cpp</a></li>
+    <li>Machine-readable vectors:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/test/data/b3pow_consensus_vectors.json">
+        src/test/data/b3pow_consensus_vectors.json</a></li>
+    <li>Reference Python verifier:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/verify-b3pow.py">
+        contrib/testing/verify-b3pow.py</a></li>
+    <li>Python reference implementation:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/ref/b3pow_ref.py">
+        contrib/miner/b3miner-rtl/ref/b3pow_ref.py</a></li>
+    <li>C++ port:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/crypto/b3pow_scratch.cpp">
+        src/crypto/b3pow_scratch.cpp</a></li>
+    <li>C++ vector replay test:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/test/b3pow_scratch_tests.cpp">
+        src/test/b3pow_scratch_tests.cpp</a></li>
+    <li>Algorithm spec:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">
+        contrib/miner/b3miner-rtl/SPEC.md</a></li>
   </ul>
 </section>
 
 <div class="page-nav">
-  <a class="prev" href="/testing/pow-verifier.html">PoW reference verifier</a>
+  <a class="prev" href="/testing/pow-verifier.html">B3PoW-Scratch reference verifier</a>
   <a class="next" href="/testing/regtest-simulation.html">Regtest network simulation</a>
 </div>
 

@@ -20,13 +20,20 @@
 </div>
 
 <header>
-  <h1>B-1 &mdash; SIMD BLAKE3 Differential Test</h1>
+  <h1>B-1 &mdash; SIMD BLAKE3 Primitive Differential Test</h1>
   <p class="subtitle">
-    The BLAKE3 C library auto-selects the fastest available SIMD code path
-    at runtime (SSE2, SSE4.1, AVX2, AVX-512 on x86_64; NEON on ARM). A
-    subtle SIMD bug could give wrong hashes on some CPUs and silently fork
-    the network. This audit cross-checks SIMD output against a portable
-    reference for thousands of inputs.
+    This audit targets the BLAKE3 <em>primitive</em>, which is the
+    inner round function used inside B3PoW-Scratch&nbsp;v1.1 (the
+    chain's actual PoW, see
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">SPEC.md</a>).
+    The BLAKE3 C library auto-selects the fastest available SIMD code
+    path at runtime (SSE2, SSE4.1, AVX2, AVX-512 on x86_64; NEON on
+    ARM). A subtle SIMD bug would give wrong hashes on some CPUs and
+    silently fork the network because B3PoW-Scratch composes BLAKE3
+    over a 1&nbsp;MB scratchpad. This audit cross-checks SIMD output
+    against a portable reference for thousands of inputs. (The
+    consensus pinning for B3PoW-Scratch itself lives in the
+    <a href="/testing/test-vectors.html">consensus vectors</a>.)
   </p>
   <div class="tagrow">
     <span class="pill">Script: <b>audit-simd-blake3.py</b></span>

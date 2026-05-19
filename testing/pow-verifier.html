@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>b3chain &mdash; PoW Reference Verifier</title>
+  <title>b3chain &mdash; B3PoW-Scratch Reference Verifier</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
@@ -15,20 +15,21 @@
 <div class="nav">
   <a href="/index.html">b3chain</a> /
   <a href="/testing.html">Testing &amp; Verification</a> /
-  PoW Reference Verifier
+  B3PoW-Scratch Reference Verifier
 </div>
 
 <header>
-  <h1>PoW Reference Verifier</h1>
+  <h1>B3PoW-Scratch Reference Verifier</h1>
   <p class="subtitle">
-    A standalone Python script that verifies the double BLAKE3-256 PoW
-    algorithm against published test vectors. Requires no running node and
-    no build &mdash; just Python and the official <code>blake3</code>
+    A standalone Python script that replays the
+    <b>B3PoW-Scratch&nbsp;v1.1</b> consensus vectors through the byte-for-byte
+    Python reference implementation. Requires no running node and no
+    C++ build &mdash; just Python and the official <code>blake3</code>
     binding.
   </p>
   <div class="tagrow">
-    <span class="pill">Script: <b>verify-blake3-pow.py</b></span>
-    <span class="pill">Runtime: <b>~1 second</b></span>
+    <span class="pill">Script: <b>verify-b3pow.py</b></span>
+    <span class="pill">Runtime: <b>~2&nbsp;seconds</b> (vectors only)</span>
     <span class="pill">Status: <b><span class="status-pass">PASS</span></b></span>
   </div>
 </header>
@@ -41,10 +42,12 @@
     Block <i>identity</i> hashes (block hash, txid, merkle tree) on b3chain
     still use double SHA-256, identical to Bitcoin Core. The
     <b>proof-of-work hash</b> is the only consensus-critical hash that
-    differs &mdash; it is double BLAKE3-256:
+    differs &mdash; it is <b>B3PoW-Scratch&nbsp;v1.1</b>, a memory-hard
+    BLAKE3 variant that walks a 1&nbsp;MB scratchpad keyed by the
+    previous block hash:
   </p>
 
-<pre>PoW_hash = BLAKE3( BLAKE3( serialize(block_header) ) )
+<pre>PoW_hash = b3pow_scratch( serialize(block_header), init_scratchpad(prev_block_hash) )
 
 where the 80-byte header serialisation is:
   nVersion       (4 bytes, int32, little-endian)
@@ -52,12 +55,29 @@ where the 80-byte header serialisation is:
   hashMerkleRoot (32 bytes, uint256, little-endian)
   nTime          (4 bytes, uint32, little-endian)
   nBits          (4 bytes, uint32, little-endian)
-  nNonce         (4 bytes, uint32, little-endian)</pre>
+  nNonce         (4 bytes, uint32, little-endian)
+
+and init_scratchpad expands prev_block_hash into a 1 MiB pad via
+BLAKE3-XOF; b3pow_scratch then runs 2048 outer iterations across
+8 lanes (2 inner BLAKE3 rounds each) and folds the lane state into a
+final 32-byte digest.</pre>
 
   <p>
-    The verifier checks this exact construction against published BLAKE3
-    test vectors and against four pre-computed b3chain block-header
-    vectors.
+    The verifier loads the canonical JSON vector set at
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/test/data/b3pow_consensus_vectors.json">
+    <code>src/test/data/b3pow_consensus_vectors.json</code></a> and
+    recomputes every entry through the Python reference at
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/ref/b3pow_ref.py">
+    <code>contrib/miner/b3miner-rtl/ref/b3pow_ref.py</code></a>. The JSON
+    file is what pins the C++ port to the Python reference; any change
+    to the algorithm shows up as a parity mismatch in one of the
+    C++ test_bitcoin runs.
+  </p>
+
+  <p class="muted">
+    The full algorithm spec is at
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">
+    <code>contrib/miner/b3miner-rtl/SPEC.md</code></a>.
   </p>
 </section>
 
@@ -67,6 +87,7 @@ where the 80-byte header serialisation is:
     <div>OS</div><div>Linux, macOS, or WSL2</div>
     <div>Python</div><div>3.10+</div>
     <div>Dependency</div><div><code>pip3 install blake3</code></div>
+    <div>Reference module</div><div>ships with the repo at <code>contrib/miner/b3miner-rtl/ref/</code></div>
   </div>
 </section>
 
@@ -75,50 +96,77 @@ where the 80-byte header serialisation is:
 <pre>git clone https://github.com/b3chain/b3chain.git
 cd b3chain
 pip3 install blake3
-python3 contrib/testing/verify-blake3-pow.py</pre>
+python3 contrib/testing/verify-b3pow.py</pre>
+  <p class="small">
+    The old entry point <code>verify-blake3-pow.py</code> is now a
+    thin deprecation shim that forwards to <code>verify-b3pow.py</code>
+    and prints a one-line warning. It will be removed in the next
+    release.
+  </p>
 </section>
 
 <section>
   <h2>4. Expected output</h2>
-<pre>BLAKE3 single-hash test vectors:
-  PASS  empty input
-  PASS  "abc"
-  PASS  64-byte chunk boundary
+<pre>============================================================
+ B3Chain B3PoW-Scratch v1.1 Verification
+============================================================
 
-Double BLAKE3-256 vectors:
-  PASS  empty input
-  PASS  "Bitcoin"
+[1/3] b3pow_ref self-check
+  PASS: SPEC_VERSION
+  PASS: b3pow_ref deterministic (zero-header)
 
-Block-header PoW vectors:
-  PASS  height 0 genesis
-  PASS  height 1
-  PASS  height 100
-  PASS  height 1000
+[2/3] B3PoW-Scratch consensus vectors
+  Loaded schema_version=1, spec_version=0x00010100
+  PASS: spec_version matches b3pow_ref
+  PASS: genesis_zero_prev: b3pow_scratch hash
+  PASS: genesis_zero_prev: pow_hash &lt;= target
+  PASS: nontrivial_prev: b3pow_scratch hash
+  PASS: nontrivial_prev: pow_hash &lt;= target
+  PASS: target_boundary: b3pow_scratch hash
+  PASS: target_boundary: pow_hash &lt;= target
+  PASS: cache_pair_first: b3pow_scratch hash
+  PASS: cache_pair_second_nonce: b3pow_scratch hash
 
-Verifier: ALL PASS</pre>
+[3/3] Live block verification
+  SKIP: no --rpc-port specified
+
+============================================================
+ RESULTS: N/N passed, 0 failed
+============================================================
+ All tests passed!</pre>
 </section>
 
 <section>
   <h2>5. With a live node (optional)</h2>
-<pre>python3 contrib/testing/verify-blake3-pow.py --rpc-port=18545</pre>
+<pre>python3 contrib/testing/verify-b3pow.py --rpc-port=18545</pre>
   <p>
-    Connects to a running b3chain regtest / testnet node, fetches the most
-    recent N blocks, recomputes the PoW hash for each header in pure
-    Python, and compares against the value the node reports.
+    Connects to a running b3chain regtest / testnet node, fetches a
+    handful of representative headers, rebuilds each 80-byte header
+    plus its <code>prev_block_hash</code>, recomputes the
+    B3PoW-Scratch hash via <code>b3pow_ref</code>, and asserts that it
+    is below the node-reported target. Pads are cached by
+    <code>prev_block_hash</code> so siblings of the same parent reuse
+    the 1&nbsp;MB scratchpad (same optimisation as the C++
+    <code>b3pow::Cache</code>).
   </p>
 </section>
 
 <section>
   <h2>6. Common pitfalls</h2>
   <ul>
+    <li><b>Forgetting <code>prev_block_hash</code>.</b> B3PoW-Scratch's
+        first byte of input is the parent-block hash, used to seed
+        the scratchpad. A reference miner that hashes only the
+        80-byte header will never agree with the chain.</li>
     <li>Using <code>hashlib.blake2b</code> by mistake &mdash; b3chain uses
         <b>BLAKE3</b>, a different (faster, parallel) algorithm. The
         <code>blake3</code> Python package is the official binding.</li>
     <li>Forgetting little-endian byte order for header fields. The
         verifier prints the bytes it serialised so you can diff them
         against your own.</li>
-    <li>Using single BLAKE3 instead of double. The script tests both, so
-        the failure mode is loud.</li>
+    <li>Skipping the consensus vectors. If you only test the inner
+        BLAKE3 primitive you will miss any divergence in the
+        scratchpad walk, the lane mix function, or the finaliser.</li>
   </ul>
 </section>
 
@@ -126,22 +174,30 @@ Verifier: ALL PASS</pre>
   <h2>7. Source links</h2>
   <ul>
     <li>Verifier:
-      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/verify-blake3-pow.py">
-        contrib/testing/verify-blake3-pow.py</a></li>
-    <li>C++ implementation:
-      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/primitives/block.cpp">
-        src/primitives/block.cpp::CBlockHeader::GetPoWHash</a></li>
-    <li>BLAKE3 spec:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/verify-b3pow.py">
+        contrib/testing/verify-b3pow.py</a></li>
+    <li>Algorithm spec:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">
+        contrib/miner/b3miner-rtl/SPEC.md</a></li>
+    <li>Python reference:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/ref/b3pow_ref.py">
+        contrib/miner/b3miner-rtl/ref/b3pow_ref.py</a></li>
+    <li>Consensus vectors (JSON):
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/test/data/b3pow_consensus_vectors.json">
+        src/test/data/b3pow_consensus_vectors.json</a></li>
+    <li>C++ port:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/crypto/b3pow_scratch.cpp">
+        src/crypto/b3pow_scratch.cpp</a> /
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/crypto/b3pow_cache.cpp">
+        src/crypto/b3pow_cache.cpp</a></li>
+    <li>BLAKE3 primitive spec:
       <a href="https://github.com/BLAKE3-team/BLAKE3-specs">BLAKE3 specs repository</a></li>
-    <li>PoW design notes:
-      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/b3chain-pow-design.md">
-        doc/b3chain-pow-design.md</a></li>
   </ul>
 </section>
 
 <div class="page-nav">
   <a class="prev" href="/testing.html">Testing hub</a>
-  <a class="next" href="/testing/test-vectors.html">BLAKE3 test vectors</a>
+  <a class="next" href="/testing/test-vectors.html">B3PoW-Scratch consensus vectors</a>
 </div>
 
 </div>

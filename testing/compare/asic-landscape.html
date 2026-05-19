@@ -93,13 +93,16 @@
     <li><b>Year one</b>: cost-of-attack is bounded by the CPU/GPU rental
         market (EC2, Vast.ai, Akash). This is much more diffuse than the
         SHA-256 ASIC market and harder to corner.</li>
-    <li><b>Eventually</b>: as B3Chain accumulates economic value, BLAKE3
-        ASICs will follow. We make no claim that BLAKE3 is permanently
-        ASIC-resistant; no algorithm is.</li>
-    <li><b>Counterweight</b>: SHA-256's enormous ASIC market is also why
-        Bitcoin's PoW is so secure today. BLAKE3 trades immediate ASIC
-        scale for initial decentralisation. These are different security
-        properties at different time horizons.</li>
+    <li><b>Eventually</b>: as B3Chain accumulates economic value,
+        B3PoW-Scratch ASICs will follow. The memory-hard design caps
+        the ASIC advantage near the memory-bandwidth-per-watt
+        frontier (see
+        <a href="b3pow-vs-sha256d.html">B3PoW-Scratch vs SHA-256d</a>),
+        but no algorithm is permanently ASIC-resistant.</li>
+    <li><b>Counterweight</b>: SHA-256's enormous ASIC market is also
+        why Bitcoin's PoW is so secure today. B3PoW-Scratch trades
+        immediate ASIC scale for initial decentralisation. These are
+        different security properties at different time horizons.</li>
   </ul>
 </section>
 
@@ -108,9 +111,10 @@
   <ul>
     <li>Not a claim that BLAKE3 is ASIC-resistant. It is not, in any
         meaningful long-term sense.</li>
-    <li>Not a claim that BLAKE3 PoW is more secure than SHA-256 PoW. SHA-
-        256 PoW is enormously secure precisely because of the mature
-        market.</li>
+    <li>Not a claim that B3PoW-Scratch is more secure than SHA-256d
+        PoW. SHA-256 PoW is enormously secure precisely because of
+        the mature ASIC market and the resulting honest-hashrate
+        cost-floor.</li>
     <li>Not a claim that B3Chain is "more decentralised forever". The
         decentralisation advantage is initial-conditions; it erodes as
         the market matures.</li>

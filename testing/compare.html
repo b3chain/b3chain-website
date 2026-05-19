@@ -22,9 +22,16 @@
   <h1>BLAKE3 vs SHA-256 &mdash; comparative suite</h1>
   <p class="subtitle">
     Side-by-side measurements and structural analysis of the two hash
-    functions. Empirical scripts produce numerical output; data-only
+    primitives. Empirical scripts produce numerical output; data-only
     documents survey the published literature. Every claim is either
     measured locally and JSON-logged, or sourced.
+  </p>
+  <p class="muted">
+    <b>Scope clarification.</b> These pages compare the BLAKE3
+    <em>primitive</em> against SHA-256. b3chain's actual PoW is
+    <b>B3PoW-Scratch&nbsp;v1.1</b> (a memory-hard construction layered
+    on top of BLAKE3); the PoW-level comparison is at
+    <a href="compare/b3pow-vs-sha256d.html">B3PoW-Scratch vs SHA-256d</a>.
   </p>
   <div class="tagrow">
     <span class="pill">Source: <b>contrib/testing/compare/</b></span>
@@ -39,10 +46,12 @@
   <h2>1. Empirical comparisons (run locally)</h2>
   <div class="card-grid">
     <a class="card" href="compare/pow-throughput.html">
-      <h3>Hash throughput</h3>
+      <h3>Hash primitive throughput</h3>
       <div class="desc">
         SHA-256 / SHA-256d / BLAKE3 / BLAKE3d / BLAKE3-portable measured
-        in hashes-per-second, single thread and N-thread, on the host CPU.
+        in hashes-per-second, single thread and N-thread, on the host
+        CPU. Measures the inner primitives only, not the memory-hard
+        B3PoW-Scratch construction.
       </div>
       <div class="meta">
         <code>compare-pow-throughput.py</code>
@@ -125,6 +134,20 @@
       </div>
       <div class="meta">
         <code>compare-collision-margin.md</code>
+        <span class="badge badge-skip">DATA</span>
+      </div>
+    </a>
+
+    <a class="card" href="compare/b3pow-vs-sha256d.html">
+      <h3>B3PoW-Scratch vs SHA-256d (PoW-level)</h3>
+      <div class="desc">
+        PoW-level comparison: memory-hardness as the upper bound on
+        ASIC speed-up, side-by-side parameters, verifier wall-clock
+        budget, scratchpad cache. Companion to the primitive-level
+        cards above.
+      </div>
+      <div class="meta">
+        <code>compare-b3pow-vs-sha256d.md</code>
         <span class="badge badge-skip">DATA</span>
       </div>
     </a>

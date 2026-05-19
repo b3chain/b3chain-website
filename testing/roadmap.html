@@ -181,8 +181,8 @@
     runs on every PR via
     <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/.github/workflows/compare-bench.yml">
     <code>.github/workflows/compare-bench.yml</code></a> and fails if
-    BLAKE3d throughput regresses by more than 10% versus the pinned
-    baseline.
+    BLAKE3 primitive throughput regresses by more than 10% versus
+    the pinned baseline.
   </p>
   <p>Future work:</p>
   <ul>
@@ -203,9 +203,10 @@
     Cure53, Quarkslab, Least Authority) for a focused review of:
   </p>
   <ul>
-    <li>BLAKE3 PoW integration: every diff that touches
+    <li>B3PoW-Scratch v1.1 integration: every diff that touches
         <code>pow.cpp</code>, <code>validation.cpp</code> PoW paths,
-        <code>chainparams.cpp</code>, <code>crypto/blake3/</code>.</li>
+        <code>chainparams.cpp</code>, <code>crypto/b3pow_scratch.cpp</code>,
+        <code>crypto/b3pow_cache.cpp</code>, <code>crypto/blake3/</code>.</li>
     <li>Address format changes
         (<code>key_io.cpp</code>, base58/bech32 wiring).</li>
     <li>HD wallet <code>coin_type</code> swap.</li>

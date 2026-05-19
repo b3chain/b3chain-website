@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>b3chain &mdash; H-1 PoW / Block-ID Isolation</title>
+  <title>b3chain &mdash; H-1 PoW / Block-ID Isolation (B3PoW-Scratch v1.1)</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
@@ -20,16 +20,18 @@
 </div>
 
 <header>
-  <h1>H-1 &mdash; PoW / Block-ID Hash Isolation</h1>
+  <h1>H-1 &mdash; PoW / Block-ID Hash Isolation (B3PoW-Scratch v1.1)</h1>
   <p class="subtitle">
     b3chain inherits Bitcoin's SHA-256d block-identity hash but replaces
-    the proof-of-work hash with double BLAKE3-256. The two algorithms must
-    never be mixed up, and every PoW check site must use the right one.
+    the proof-of-work hash with <b>B3PoW-Scratch v1.1</b> &mdash; a
+    memory-hard BLAKE3 variant with a 1&nbsp;MB scratchpad. The two
+    algorithms must never be mixed up, and every PoW check site must
+    use the right one.
   </p>
   <div class="tagrow">
-    <span class="pill">Script: <b>audit-pow-isolation.py</b></span>
-    <span class="pill">Runtime: <b>~1 s</b></span>
-    <span class="pill">Status: <b><span class="status-pass">7 / 7 PASS</span></b></span>
+    <span class="pill">Script: <b>audit-b3pow-isolation.py</b></span>
+    <span class="pill">Runtime: <b>~2 s</b></span>
+    <span class="pill">Status: <b><span class="status-pass">PASS</span></b></span>
   </div>
 </header>
 
@@ -40,169 +42,207 @@
   <div class="diagram">
 <pre>CBlockHeader (80 bytes)
    |
-   +-- GetHash()      = SHA-256d(serialize(header))   --&gt; block ID, txid context, p2p inv, header chain
+   +-- GetHash()      = SHA-256d(serialize(header))                                      --&gt; block ID, txid context, p2p inv, header chain
    |
-   +-- GetPoWHash()   = BLAKE3d(serialize(header))    --&gt; CheckProofOfWork(...) only</pre>
+   +-- GetPoWHash(prev_block_hash, pad, budget, out_exceeded)
+                      = b3pow_scratch(serialize(header), init_scratchpad(prev_block_hash))
+                                                                                         --&gt; CheckProofOfWork(...) only</pre>
   </div>
   <p>
-    Two methods, two algorithms, one input. Every consensus call site must
-    pick the right one, and the audit verifies this statically and on a
-    live regtest block.
+    Two methods, two algorithms, one block header. Every consensus
+    call site must pick the right one; the audit verifies this
+    statically and on a live regtest block. The full B3PoW-Scratch
+    spec is at
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">
+    <code>contrib/miner/b3miner-rtl/SPEC.md</code></a>.
   </p>
 </section>
 
-<section>
+<section id="h-1">
   <h2>2. What is being audited</h2>
   <ul>
     <li><b>Static call-site scan.</b> Every <code>CheckProofOfWork(...)</code>
         invocation in the source tree must pass a value derived from
-        <code>GetPoWHash()</code>. Direct use of <code>GetHash()</code> is
-        flagged.</li>
-    <li><b>Static implementation scan.</b> The PoW hashing implementation
-        in <code>src/primitives/block.cpp</code> must reference BLAKE3.</li>
+        <code>GetPoWHash()</code> (or an already-computed
+        <code>*pow_hash_opt</code>). Direct use of <code>GetHash()</code>
+        is flagged.</li>
+    <li><b>Static implementation scan.</b> The PoW path in
+        <code>src/primitives/block.cpp</code> must include
+        <code>&lt;crypto/b3pow_scratch.h&gt;</code> and call into the
+        B3PoW port, not bare BLAKE3.</li>
     <li><b>Header API scan.</b> <code>CBlockHeader</code> in
         <code>src/primitives/block.h</code> must declare both
-        <code>GetHash()</code> and <code>GetPoWHash()</code>.</li>
+        <code>GetHash()</code> and the v1.1 4-arg
+        <code>GetPoWHash(prev_block_hash, pad, budget, out_exceeded)</code>.</li>
     <li><b>Functional check.</b> Mine a regtest block and verify:
       <ul>
         <li>Re-serialising and SHA-256d-ing the header reproduces the
             block ID returned by <code>getblockhash</code>.</li>
-        <li>BLAKE3d of the same bytes is a different value.</li>
-        <li>The BLAKE3d value (interpreted as little-endian uint256) is
+        <li><code>b3pow_ref.b3pow_scratch(header, prev_block_hash)</code>
+            is a different value (the dual-hash methods are
+            independent).</li>
+        <li>That B3PoW value (interpreted as little-endian uint256) is
             below the block's compact target.</li>
       </ul>
     </li>
   </ul>
 </section>
 
+<section id="h-1-1">
+  <h2>3. Sub-check H-1.1 &mdash; verifier wall-clock budget</h2>
+  <p>
+    Because B3PoW-Scratch can take milliseconds to verify (vs
+    microseconds for SHA-256d), an adversary that submits a header
+    designed to be hard to disprove could burn CPU. The verifier
+    therefore runs under a <b>50&nbsp;ms wall-clock budget</b>
+    (consensus parameter <code>b3pow_verify_budget_ms</code>); if the
+    budget expires before a decision is reached, the result is
+    <code>PoWResult::BudgetExceeded</code>, which propagates as
+    <code>BlockValidationResult::BLOCK_POW_BUDGET</code> and routes to
+    <code>Misbehaving(*peer, "b3pow-budget-exceeded")</code>.
+  </p>
+  <p>
+    Script:
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-b3pow-budget.py">
+    <code>audit-b3pow-budget.py</code></a> &mdash; static checks plus
+    the matching C++ unit tests
+    (<code>pow_hash_budget_exceeded</code>,
+    <code>CheckBlockHeaderPoW_budget_exceeded</code>).
+  </p>
+</section>
+
+<section id="h-1-2">
+  <h2>4. Sub-check H-1.2 &mdash; LRU scratchpad cache</h2>
+  <p>
+    The first verification against a given <code>prev_block_hash</code>
+    spends ~5&nbsp;ms initialising a 1&nbsp;MB scratchpad. To avoid
+    paying that cost again for sibling headers that share the same
+    parent, <code>ChainstateManager</code> owns a
+    <code>b3pow::Cache</code> &mdash; a thread-safe LRU keyed by
+    <code>prev_block_hash</code>, depth
+    <code>consensus.b3pow_cache_depth</code> (4 entries by default
+    &asymp; 4&nbsp;MB resident).
+  </p>
+  <p>
+    Script:
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-b3pow-cache.py">
+    <code>audit-b3pow-cache.py</code></a> &mdash; static wiring checks
+    plus the <code>b3pow_cache_tests</code> C++ suite, which covers
+    insert/retrieve, LRU eviction, distinct pads per
+    <code>prev_block_hash</code>, and thread-safety under concurrent
+    access.
+  </p>
+</section>
+
+<section id="h-1-3">
+  <h2>5. Sub-check H-1.3 &mdash; HEADERS verification cap</h2>
+  <p>
+    Bitcoin's protocol allows up to 2000 headers per HEADERS message.
+    At 50&nbsp;ms per B3PoW verification, naively verifying all 2000
+    would burn 100&nbsp;s of CPU per malicious peer per message. To
+    bound that, <code>ProcessHeadersMessage</code> truncates the
+    verified subset to <code>MAX_B3POW_VERIFY_PER_BATCH = 256</code>
+    headers, capping worst-case CPU at &asymp;13&nbsp;s per malicious
+    peer per message. Truncation is logged via
+    <code>LogDebug(BCLog::NET, "Truncating HEADERS batch...")</code>.
+    Any deferred headers are fetched on the next round-trip.
+  </p>
+  <p>
+    Script:
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-b3pow-headers-cap.py">
+    <code>audit-b3pow-headers-cap.py</code></a>.
+  </p>
+</section>
+
 <section>
-  <h2>3. Why it matters</h2>
+  <h2>6. Why it matters</h2>
   <p>
     A bug here can fork the network in two distinct ways:
   </p>
   <ol>
-    <li>If the chain accepts blocks where SHA-256d of the header is below
-        target (instead of BLAKE3d), then any pre-existing Bitcoin ASIC can
-        instantly attack b3chain. The whole reason for BLAKE3 disappears.</li>
-    <li>If <code>getblockhash</code> returns the BLAKE3 hash instead of
+    <li>If the chain accepts blocks where SHA-256d of the header is
+        below target (instead of B3PoW-Scratch), then any pre-existing
+        Bitcoin ASIC can instantly attack b3chain. The whole reason
+        for B3PoW disappears.</li>
+    <li>If <code>getblockhash</code> returns the B3PoW hash instead of
         the SHA-256d hash, every block explorer, light client, and
         Merkle-proof verifier breaks immediately.</li>
   </ol>
 </section>
 
 <section>
-  <h2>4. How to run</h2>
+  <h2>7. How to run</h2>
 <pre>cd b3chain
 pip3 install blake3   # for the functional check
-python3 contrib/testing/audit/audit-pow-isolation.py</pre>
+python3 contrib/testing/audit/audit-b3pow-isolation.py
+python3 contrib/testing/audit/audit-b3pow-budget.py
+python3 contrib/testing/audit/audit-b3pow-cache.py
+python3 contrib/testing/audit/audit-b3pow-headers-cap.py</pre>
+  <p class="small">
+    Or run everything (Phase&nbsp;11 + the three B3PoW sub-audits) via
+    <code>bash contrib/testing/audit/run-all.sh</code>.
+  </p>
+  <p class="small">
+    The old script paths <code>audit-pow-isolation.py</code> and
+    <code>audit-internal-miner-e2e.py</code> remain as thin
+    deprecation shims that <code>exec</code> the new entry points,
+    so any external runner pinned to the old filenames keeps working
+    for one release.
+  </p>
 </section>
 
 <section>
-  <h2>5. Expected output</h2>
-<pre>[H-1] PoW / Block-ID hash isolation
+  <h2>8. Expected output</h2>
+<pre>[H-1] PoW / Block-ID isolation (B3PoW-Scratch v1.1)
 ========================================================================
-  PASS  [H-1] 2 CheckProofOfWork call site(s) all use GetPoWHash
-  PASS  [H-1] PoW hashing references BLAKE3 (src/primitives/block.cpp, src/primitives/block.h)
+  PASS  [H-1] N CheckProofOfWork call site(s) all use a PoW hash
+  PASS  [H-1] PoW path references b3pow_scratch (src/primitives/block.cpp, src/primitives/block.h)
   PASS  [H-1] CBlockHeader::GetHash() declared
-  PASS  [H-1] CBlockHeader::GetPoWHash() declared
+  PASS  [H-1] CBlockHeader::GetPoWHash(prev_block_hash, pad, budget, out_exceeded) declared
+  PASS  [H-1.1] BLOCK_POW_BUDGET routes to Misbehaving("b3pow-budget-exceeded")
+  PASS  [H-1.2] ChainstateManager::m_b3pow_cache declared
+  PASS  [H-1.3] MAX_B3POW_VERIFY_PER_BATCH caps HEADERS batches
 
   Spawning regtest node and verifying live block hash relationships...
-  PASS  [H-1] getblockhash() returns SHA-256d (block ID), not BLAKE3
-  PASS  [H-1] block ID and BLAKE3 PoW hash are different  id=68c337ef569de154...  pow=3adf8417d7586ce7...
-  PASS  [H-1] mined block's BLAKE3 PoW hash <= target  hash_int < target: True
+  PASS  [H-1] getblockhash() returns SHA-256d (block ID), not B3PoW
+  PASS  [H-1] block ID and B3PoW hash are different  id=68c337ef...  pow=3adf8417...
+  PASS  [H-1] mined block's B3PoW hash &lt;= target  pow_int &lt;= target: True
 ------------------------------------------------------------------------
-  7/7 checks passed in 1.3s
+  10/10 checks passed in 1.8s
 AUDIT RESULT: PASS  [H-1]</pre>
 </section>
 
 <section>
-  <h2>6. Common pitfalls</h2>
+  <h2>9. Source files</h2>
   <ul>
-    <li><b>Variable name confusion.</b> The audit also matches
-        <code>pow_hash</code> / <code>powhash</code> identifiers, but if
-        you store the PoW hash in a generic <code>uint256 hash</code>
-        variable the audit cannot tell which algorithm produced it &mdash;
-        prefer descriptive names.</li>
-    <li><b>Forward declarations.</b> Lines like
-        <code>bool CheckProofOfWork(uint256 hash, ...)</code> are
-        whitelisted (function parameter, not a call). The audit detects
-        this with a regex on <code>uint256 hash</code>.</li>
-    <li><b>Headers chain check.</b> Bitcoin's
-        <code>HeadersChainSync</code> verifies cumulative work using the
-        target derived from <code>nBits</code>, not the actual hash, so
-        it is unaffected by this isolation.</li>
-  </ul>
-</section>
-
-<section>
-  <h2>7. Source files</h2>
-  <ul>
-    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-pow-isolation.py">
-        contrib/testing/audit/audit-pow-isolation.py</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-b3pow-isolation.py">
+        contrib/testing/audit/audit-b3pow-isolation.py</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-b3pow-budget.py">
+        contrib/testing/audit/audit-b3pow-budget.py</a> (H-1.1)</li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-b3pow-cache.py">
+        contrib/testing/audit/audit-b3pow-cache.py</a> (H-1.2)</li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/audit-b3pow-headers-cap.py">
+        contrib/testing/audit/audit-b3pow-headers-cap.py</a> (H-1.3)</li>
     <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/primitives/block.cpp">
         src/primitives/block.cpp</a> &mdash;
         <code>GetHash</code> and <code>GetPoWHash</code> definitions</li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/crypto/b3pow_scratch.cpp">
+        src/crypto/b3pow_scratch.cpp</a> &mdash; the C++ port</li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/crypto/b3pow_cache.cpp">
+        src/crypto/b3pow_cache.cpp</a> &mdash; <code>b3pow::Cache</code></li>
     <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/pow.cpp">
-        src/pow.cpp</a> &mdash; <code>CheckProofOfWork</code></li>
-    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/validation.cpp#L3927">
-        src/validation.cpp</a> &mdash; the two consensus call sites</li>
+        src/pow.cpp</a> &mdash; <code>CheckProofOfWork</code> +
+        <code>CheckBlockHeaderPoW</code></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/net_processing.cpp">
+        src/net_processing.cpp</a> &mdash; budget routing +
+        <code>MAX_B3POW_VERIFY_PER_BATCH</code></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">
+        contrib/miner/b3miner-rtl/SPEC.md</a> &mdash; the algorithm spec</li>
   </ul>
 </section>
 
 <!-- TUTORIAL -->
-<section class="tutorial">
-<h3>The problem in one sentence</h3>
-<p>B3Chain uses <strong>two different hash functions</strong> for two purposes — SHA-256d for block IDs (so external tools and explorers stay compatible) and BLAKE3d for the proof-of-work check — and confusing them is a catastrophic, silent failure.</p>
-<h3>The theory</h3>
-<p>Every block has two hashes:</p>
-<pre>GetHash()    -&gt; SHA-256d(serialized header)    # used as block id, txid lookup, merkle leaf
-GetPoWHash() -&gt; BLAKE3d(serialized header)     # used by ContextualCheckProofOfWork</pre>
-<p>A miner's job is to find a header with <code>GetPoWHash() &lt;= target</code>. The network's job is to verify that property. If <code>ContextualCheckProofOfWork</code> ever calls <code>GetHash()</code> instead of <code>GetPoWHash()</code>:</p>
-<ul>
-  <li>Block IDs are usually well below the target (because SHA-256 outputs</li>
-</ul>
-<p>  are uniform 32-byte numbers, just like BLAKE3 outputs).</p>
-<ul>
-  <li>So almost any block submitted to such a buggy node would pass PoW</li>
-</ul>
-<p>  validation — including blocks with no actual mining work behind them.</p>
-<ul>
-  <li>Result: the chain's PoW security collapses to "whatever the easiest</li>
-</ul>
-<p>  way to find a low SHA-256 hash is", which is effectively zero on   modern CPUs.</p>
-<h3>Hands-on demo</h3>
-<pre>python3 contrib/testing/audit/audit-pow-isolation.py</pre>
-<p>This audit does two things:</p>
-<ol>
-  <li><strong>Static grep</strong> over every <code>GetHash()</code> and <code>GetPoWHash()</code> call site in</li>
-</ol>
-<p>   <code>src/</code>, classifying each one as "PoW context" or "ID context" and    flagging mismatches.</p>
-<ol>
-  <li><strong>Functional test</strong>: constructs a header where SHA-256d ≤ target but</li>
-</ol>
-<p>   BLAKE3d &gt; target, submits it to a regtest node, expects rejection.    Then the inverse.</p>
-<h3>Exercise</h3>
-<p>In <code>src/validation.cpp</code>, locate <code>ContextualCheckProofOfWork</code> (or <code>CheckProofOfWork</code> depending on the call path). Replace the call to <code>GetPoWHash()</code> with <code>GetHash()</code>. Rebuild, re-run the audit:</p>
-<pre>// Before
-if (!CheckProofOfWork(block.GetPoWHash(), block.nBits, params)) ...
-// After (catastrophic)
-if (!CheckProofOfWork(block.GetHash(), block.nBits, params)) ...</pre>
-<p>Expected new output:</p>
-<pre>  FAIL  [H-1] static audit found PoW check using GetHash (line N of validation.cpp)
-  FAIL  [H-1] header with SHA256d-only PoW accepted by regtest node
-AUDIT RESULT: FAIL  [H-1]</pre>
-<h3>Why "looks fine in CI" doesn't help</h3>
-<p>Most unit tests work with regtest, where <code>nBits</code> is set very low and both hashes pass anyway. The bug only manifests in production once a real attacker notices it. That's exactly why this audit runs the contradiction check — a header that satisfies one hash function but not the other — rather than relying on "did the node accept the block?".</p>
-<h3>Further reading</h3>
-<ul>
-  <li>BIP-141 SegWit txid vs wtxid (similar dual-identity pattern):</li>
-</ul>
-<p>  github.com/bitcoin/bips/blob/master/bip-0141.mediawiki</p>
-<ul>
-  <li>The original BCH split confused some mining hardware about which</li>
-</ul>
-<p>  difficulty algorithm to use; this is the same class of bug at the   hash-function level.</p>
-</section>
+<!-- (regenerated from contrib/testing/audit/tutorials/audit-b3pow-isolation.md via inject-tutorial.py) -->
 <!-- /TUTORIAL -->
 
 <div class="page-nav">

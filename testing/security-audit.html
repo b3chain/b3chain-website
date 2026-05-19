@@ -27,7 +27,7 @@
   </p>
   <div class="tagrow">
     <span class="pill">Status: <b><span class="status-pass">all PASS</span></b></span>
-    <span class="pill">Items: <b>11</b></span>
+    <span class="pill">Items: <b>14</b></span>
     <span class="pill">Source: <b>doc/SECURITY-AUDIT.md</b></span>
   </div>
 </header>
@@ -42,12 +42,12 @@
     </thead>
     <tbody>
       <tr><td>Consensus invariants</td><td>4</td><td><span class="status-pass">4</span></td><td>0</td><td>0</td></tr>
-      <tr><td>Hash function isolation</td><td>1</td><td><span class="status-pass">1</span></td><td>0</td><td>0</td></tr>
+      <tr><td>Hash function isolation (incl. B3PoW-Scratch sub-checks)</td><td>4</td><td><span class="status-pass">4</span></td><td>0</td><td>0</td></tr>
       <tr><td>Network isolation</td><td>1</td><td><span class="status-pass">1</span></td><td>0</td><td>0</td></tr>
       <tr><td>Wallet &amp; address safety</td><td>2</td><td><span class="status-pass">2</span></td><td>0</td><td>0</td></tr>
       <tr><td>Build / regression</td><td>2</td><td><span class="status-pass">2</span></td><td>0</td><td>0</td></tr>
       <tr><td>Attack simulation</td><td>1</td><td><span class="status-pass">1</span></td><td>0</td><td>0</td></tr>
-      <tr><td><b>Total</b></td><td><b>11</b></td><td><b><span class="status-pass">11</span></b></td><td><b>0</b></td><td><b>0</b></td></tr>
+      <tr><td><b>Total</b></td><td><b>14</b></td><td><b><span class="status-pass">14</span></b></td><td><b>0</b></td><td><b>0</b></td></tr>
     </tbody>
   </table>
 </section>
@@ -63,11 +63,14 @@
       <tr><td>C-2</td><td>Total supply caps at 20 999 999.97690000 B3C</td><td><code>audit-supply-cap.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-supply-cap.html">page</a></td></tr>
       <tr><td>C-3</td><td>Subsidy returns 0 after halving 64</td><td><code>audit-supply-cap.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-supply-cap.html">page</a></td></tr>
       <tr><td>C-4</td><td>Difficulty retarget enforces 4&times; bounds</td><td><code>audit-supply-cap.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-supply-cap.html">page</a></td></tr>
-      <tr><td>H-1</td><td>PoW / Block-ID hash isolation</td><td><code>audit-pow-isolation.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-pow-isolation.html">page</a></td></tr>
+      <tr><td>H-1</td><td>PoW / Block-ID hash isolation (<b>B3PoW-Scratch v1.1</b> vs SHA-256d)</td><td><code>audit-b3pow-isolation.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-pow-isolation.html">page</a></td></tr>
+      <tr><td>H-1.1</td><td>B3PoW verifier wall-clock budget enforcement (<code>BLOCK_POW_BUDGET</code> &rarr; <code>Misbehaving</code>)</td><td><code>audit-b3pow-budget.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-pow-isolation.html#h-1-1">page</a></td></tr>
+      <tr><td>H-1.2</td><td>LRU scratchpad cache wiring (<code>b3pow::Cache</code> &amp; <code>b3pow_cache_tests</code>)</td><td><code>audit-b3pow-cache.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-pow-isolation.html#h-1-2">page</a></td></tr>
+      <tr><td>H-1.3</td><td><code>MAX_B3POW_VERIFY_PER_BATCH</code> HEADERS-cap enforcement</td><td><code>audit-b3pow-headers-cap.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-pow-isolation.html#h-1-3">page</a></td></tr>
       <tr><td>N-1</td><td>Bitcoin magic / DNS seed isolation</td><td><code>audit-network-isolation.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-network-isolation.html">page</a></td></tr>
       <tr><td>W-1</td><td>Bitcoin address rejection (36 samples)</td><td><code>audit-address-rejection.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-address-rejection.html">page</a></td></tr>
       <tr><td>W-2</td><td>HD wallet BIP44 coin_type 9333</td><td><code>audit-hd-coin-type.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-hd-coin-type.html">page</a></td></tr>
-      <tr><td>B-1</td><td>SIMD vs portable C BLAKE3 differential</td><td><code>audit-simd-blake3.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-simd-blake3.html">page</a></td></tr>
+      <tr><td>B-1</td><td>BLAKE3 primitive determinism (SIMD vs portable C)</td><td><code>audit-simd-blake3.py</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-simd-blake3.html">page</a></td></tr>
       <tr><td>B-2</td><td>Rebranding regression scan</td><td><code>audit-rebranding.sh</code></td><td><span class="badge badge-pass">PASS</span></td><td><a href="/testing/audit-rebranding.html">page</a></td></tr>
       <tr><td>A-1</td><td>51% attack live regtest demo</td><td><code>audit-51-attack-sim.py</code></td><td><span class="badge badge-pass">DEMO</span></td><td><a href="/testing/51-attack.html">page</a></td></tr>
     </tbody>

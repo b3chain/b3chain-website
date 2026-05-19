@@ -214,12 +214,19 @@ AUDIT RESULT: PASS  [A-1]</pre>
 <section id="defences">
   <h2>5. How b3chain helps <a class="anchor" href="#defences">#</a></h2>
   <ul>
-    <li><b>BLAKE3 PoW.</b> Bitcoin's SHA-256 ASIC industry has produced
-        very concentrated hashrate. BLAKE3 is new enough that no
-        large-scale ASIC line exists, so early b3chain hashrate is
-        unlikely to be dominated by a single industrial farm. This
-        advantage erodes as the chain matures &mdash; eventually BLAKE3
-        ASICs will exist.</li>
+    <li><b>B3PoW-Scratch v1.1 (memory-hard PoW).</b> Bitcoin's
+        SHA-256 ASIC industry has produced very concentrated hashrate.
+        B3PoW-Scratch spends most of its time in a 1&nbsp;MB
+        per-header scratchpad walk, so on-die SRAM bandwidth dominates
+        the hashrate-per-watt curve rather than raw arithmetic
+        throughput &mdash; the ASIC speed-up upper bound is bounded by
+        memory-bandwidth, not by primitive throughput. Early b3chain
+        hashrate is unlikely to be dominated by a single industrial
+        farm. See
+        <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">SPEC.md</a>
+        for the algorithm and
+        <a href="/testing/compare.html">compare</a>
+        for the side-by-side analysis.</li>
     <li><b>Conservative consensus.</b> No exotic proof-of-stake or finality
         gadget that could open new attack surfaces. The only PoW behaviour
         change is the algorithm itself.</li>
@@ -307,9 +314,9 @@ AUDIT RESULT: PASS  [A-1]</pre>
 <h3>What protects B3Chain</h3>
 <p>Three layers, in increasing order of importance:</p>
 <ol>
-  <li><strong>BLAKE3 PoW reduces ASIC concentration risk in early days.</strong> The</li>
+  <li><strong>B3PoW-Scratch v1.1 is memory-hard, reducing ASIC concentration risk in early days.</strong> The</li>
 </ol>
-<p>   cost-of-attack at launch is bounded by GPU/CPU rental rates, which    are diffuse. Bitcoin's SHA-256 ASIC market is concentrated in 5    companies; those companies could (in principle) repurpose hardware    to attack a SHA-256 fork from day one. BLAKE3 doesn't have that    problem yet.</p>
+<p>   PoW spends most of its time in a 1 MB per-header scratchpad walk (see <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">SPEC.md</a>), so on-die SRAM/L1 buying power dominates the hashrate-per-watt curve rather than raw arithmetic throughput. That makes B3PoW-Scratch ASICs <em>possible</em> but expensive and slow to profitably outpace commodity CPUs and GPUs &mdash; much harder than building a stock SHA-256 ASIC. Bitcoin's SHA-256 ASIC market is concentrated in 5 companies; those companies could (in principle) repurpose hardware to attack a SHA-256 fork from day one. B3PoW doesn't have that problem yet.</p>
 <ol>
   <li><strong>Conservative confirmation defaults.</strong> Wallets and exchanges should</li>
 </ol>

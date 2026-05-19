@@ -24,7 +24,7 @@
     free test coins from the faucet, mine blocks with the reference
     CPU miner, and watch the chain in the explorer. Test B3C has
     <b>no monetary value</b>; this network exists to soak-test the
-    consensus rules and BLAKE3 PoW pipeline before mainnet launch.
+    consensus rules and B3PoW-Scratch v1.1 PoW pipeline before mainnet launch.
   </p>
   <div class="tagrow">
     <span class="pill">Phase: <b>8a bootstrap</b></span>
@@ -116,7 +116,7 @@
     works as-is &mdash; it talks to your local node via JSON-RPC and
     submits valid blocks via <code>submitblock</code>.
   </p>
-<pre>pip install blake3
+<pre>pip install blake3                              # required by b3pow_ref (ships in contrib/miner/b3miner-rtl/ref/)
 b3chain-cli -chain=test getnewaddress "" bech32
 # tb3...your-address...
 

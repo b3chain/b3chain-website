@@ -4,6 +4,7 @@ Static site for **b3chain**. Deploys to GitHub, IPFS, and ENS.
 
 - **Repo:** [github.com/b3chain/b3chain-website](https://github.com/b3chain/b3chain-website)
 - **GitHub Pages (optional):** `https://b3chain.github.io/b3chain-website/`
+- **ENS (when set):** [b3chain.eth](https://b3chain.eth.link)
 
 ## Structure
 

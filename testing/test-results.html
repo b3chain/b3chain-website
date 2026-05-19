@@ -21,46 +21,49 @@
 <header>
   <h1>Current Test Results</h1>
   <p class="subtitle">
-    Snapshot of the most recent test runs. Re-run any of these on your own
-    machine and you should see the same numbers.
+    Snapshot of the most recent full test run.  Re-run any of these on
+    your own machine and you should see the same numbers.  Last refreshed
+    from <code>contrib/testing/results/20260519T193234Z/summary.json</code>
+    (B3PoW-Scratch v1.1 corpus, 2026-05-19, UTC).
   </p>
 </header>
 
 <div class="content">
 
 <section>
-  <h2>1. Reproducible test suites</h2>
+  <h2>1. Full corpus run</h2>
+  <p>
+    The B3Chain test corpus is one shell script —
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/tools/run-full-corpus.sh"><code>contrib/testing/tools/run-full-corpus.sh</code></a>
+    — that runs every layer of verification end-to-end and writes a
+    <code>summary.json</code> + per-test <code>.log</code> into
+    <code>contrib/testing/results/&lt;utc-timestamp&gt;/</code>.  Below is
+    the latest published run.
+  </p>
   <table>
     <thead>
-      <tr><th>Suite</th><th>Passed</th><th>Failed</th><th>Skipped</th></tr>
+      <tr><th>ID</th><th>Suite</th><th>Result</th><th>Duration</th><th>Notes</th></tr>
     </thead>
     <tbody>
-      <tr>
-        <td>C++ unit tests (<code>ctest</code>)</td>
-        <td><span class="status-pass">148</span></td>
-        <td><span class="status-pass">0</span></td>
-        <td>1</td>
-      </tr>
-      <tr>
-        <td>Python functional tests (<code>test_runner.py</code>)</td>
-        <td><span class="status-pass">258</span></td>
-        <td><span class="status-pass">0</span></td>
-        <td>19</td>
-      </tr>
-      <tr>
-        <td>Regtest simulation (<code>regtest-simulation.sh</code>)</td>
-        <td><span class="status-pass">19</span></td>
-        <td><span class="status-pass">0</span></td>
-        <td>0</td>
-      </tr>
-      <tr>
-        <td>BLAKE3 PoW verifier (<code>verify-blake3-pow.py</code>)</td>
-        <td><span class="status-pass">9</span></td>
-        <td><span class="status-pass">0</span></td>
-        <td>0</td>
-      </tr>
+      <tr><td>cpp_pow</td><td>C++ <code>pow_tests</code> (b3chain-specific)</td><td><span class="badge badge-pass">PASS</span></td><td>0.2 s</td><td>magic bytes, ports, DNS seeds, early-diff guard, B3PoW hash, budget</td></tr>
+      <tr><td>cpp_b3pow_scratch</td><td>C++ <code>b3pow_scratch_tests</code></td><td><span class="badge badge-pass">PASS</span></td><td>0.2 s</td><td>4 cases incl. consensus vectors C++ ↔ Python parity</td></tr>
+      <tr><td>cpp_b3pow_cache</td><td>C++ <code>b3pow_cache_tests</code></td><td><span class="badge badge-pass">PASS</span></td><td>0.2 s</td><td>LRU eviction, thread-safe lookup, cache-pair re-use</td></tr>
+      <tr><td>cpp_crypto</td><td>C++ <code>crypto_tests</code></td><td><span class="badge badge-pass">PASS</span></td><td>0.7 s</td><td>BLAKE3 primitive, AES, ChaCha20, HKDF, etc.</td></tr>
+      <tr><td>cpp_validation</td><td>C++ <code>validation_tests</code></td><td><span class="badge badge-pass">PASS</span></td><td>0.2 s</td><td>block validation, chain selection, mempool</td></tr>
+      <tr><td>phase11_master</td><td>Phase 11 self-audit (<code>run-all.sh</code>)</td><td><span class="badge badge-pass">PASS</span></td><td>3 m 30 s</td><td>11 audits PASS — see § 2</td></tr>
+      <tr><td>verify_b3pow</td><td>B3PoW-Scratch reference verifier</td><td><span class="badge badge-pass">PASS</span></td><td>3 s</td><td>offline check against <code>b3pow_consensus_vectors.json</code></td></tr>
+      <tr><td>feature_b3pow</td><td>Functional test <code>feature_b3pow.py</code></td><td><span class="badge badge-pass">PASS</span></td><td>1 s</td><td>spec-version, dual-hash, budget, header-cap on a live regtest node</td></tr>
+      <tr><td>stratum_pool</td><td>Stratum pool audit (P-1 … P-4)</td><td><span class="badge badge-pass">PASS</span></td><td>1 s</td><td>14 / 14 checks (10 static + 4 node-test)</td></tr>
+      <tr><td>stratum_v2</td><td>Stratum V2 audit (S-1 … S-6)</td><td><span class="badge badge-pass">PASS</span></td><td>4 s</td><td>17 / 17 checks (11 static + 6 node-test)</td></tr>
+      <tr><td>bitcoin_inh</td><td>Bitcoin inheritance audit (full ctest + functional)</td><td><span class="badge badge-pass">PASS</span></td><td>2 h 11 m</td><td>captured separately at run <code>20260519T095923Z</code></td></tr>
+      <tr><td>compare_all</td><td>BLAKE3 vs SHA-256d compare suite</td><td><span class="badge badge-pass">PASS</span></td><td>31 s</td><td>throughput + algorithm-properties table</td></tr>
     </tbody>
   </table>
+  <p class="small">
+    All 12 / 12 corpus stages PASS.  Raw logs live next to the
+    <code>summary.json</code> in the same results directory and are
+    committed to the repo for permanent traceability.
+  </p>
 </section>
 
 <section>
@@ -71,17 +74,20 @@
     </thead>
     <tbody>
       <tr><td>C-1..C-4</td><td>Supply cap &amp; halving</td><td><span class="badge badge-pass">PASS</span></td><td>9 / 9 checks</td></tr>
-      <tr><td>H-1</td><td>PoW / block-ID isolation</td><td><span class="badge badge-pass">PASS</span></td><td>7 / 7 checks</td></tr>
+      <tr><td>H-1</td><td>PoW / block-ID isolation (B3PoW-Scratch v1.1)</td><td><span class="badge badge-pass">PASS</span></td><td>10 / 10 checks</td></tr>
+      <tr><td>H-1.1</td><td>B3PoW verifier wall-clock budget enforcement</td><td><span class="badge badge-pass">PASS</span></td><td>6 / 6 checks (static + ctest)</td></tr>
+      <tr><td>H-1.2</td><td>B3PoW LRU scratchpad cache</td><td><span class="badge badge-pass">PASS</span></td><td>6 / 6 checks (static + ctest)</td></tr>
+      <tr><td>H-1.3</td><td>HEADERS-batch verification cap</td><td><span class="badge badge-pass">PASS</span></td><td>4 / 4 checks (static)</td></tr>
       <tr><td>N-1</td><td>Network isolation</td><td><span class="badge badge-pass">PASS</span></td><td>15 / 15 checks</td></tr>
       <tr><td>W-1</td><td>Bitcoin address rejection</td><td><span class="badge badge-pass">PASS</span></td><td>8 / 8 checks (36 addresses)</td></tr>
-      <tr><td>B-1</td><td>SIMD BLAKE3 differential</td><td><span class="badge badge-pass">PASS</span></td><td>4 / 4 checks (1 037 inputs)</td></tr>
-      <tr><td>B-2</td><td>Rebranding regression</td><td><span class="badge badge-pass">PASS</span></td><td>6 / 6 checks (after fixes)</td></tr>
+      <tr><td>B-1</td><td>SIMD BLAKE3 differential (primitive only)</td><td><span class="badge badge-pass">PASS</span></td><td>4 / 4 checks (1 037 inputs)</td></tr>
+      <tr><td>B-2</td><td>Rebranding regression</td><td><span class="badge badge-pass">PASS</span></td><td>6 / 6 checks</td></tr>
       <tr><td>W-2</td><td>HD wallet coin_type 9333</td><td><span class="badge badge-pass">PASS</span></td><td>9 / 9 checks</td></tr>
       <tr><td>A-1</td><td>51% double-spend simulation</td><td><span class="badge badge-pass">DEMO</span></td><td>4 / 4 checks (regtest)</td></tr>
     </tbody>
   </table>
   <p class="small">
-    Detailed results in
+    Detailed property descriptions in
     <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/SECURITY-AUDIT.md">
     <code>doc/SECURITY-AUDIT.md</code></a>.
   </p>
@@ -90,25 +96,31 @@
 <section>
   <h2>3. Performance markers</h2>
   <div class="kvs">
-    <div>BLAKE3 single-thread</div><div>~1.4 MH/s on a modern CPU (single-thread, no SIMD batching)</div>
-    <div>Mining 2 016 blocks</div><div>~70 s on regtest (3 nodes, single CPU)</div>
-    <div>Audit run-all</div><div>~90 s (excluding ctest reruns)</div>
+    <div>B3PoW-Scratch verifier (single-thread)</div><div>&lt;= 50 ms / header on a modern CPU; pad reused via LRU cache for sibling headers</div>
+    <div>BLAKE3 primitive (single-thread)</div><div>~1.4 GB/s on a modern CPU (no SIMD batching)</div>
+    <div>Audit <code>run-all.sh</code></div><div>~3 m 30 s on this workstation (includes B-1 SIMD differential @ 1 037 inputs)</div>
+    <div>Bitcoin-inheritance full suite</div><div>~2 h 11 m end-to-end (ctest + functional + extended functional)</div>
   </div>
 </section>
 
 <section>
   <h2>4. Reproduce</h2>
-<pre># Build
-cd b3chain &amp;&amp; mkdir -p build &amp;&amp; cd build &amp;&amp; cmake .. &amp;&amp; cmake --build . -j$(nproc)
+<pre># 1. Build the node + tests.
+cd b3chain &amp;&amp; mkdir -p build &amp;&amp; cd build
+cmake .. -DBUILD_TESTS=ON &amp;&amp; cmake --build . -j$(nproc)
 
-# Reproducible suites
-ctest --output-on-failure
-python3 ../test/functional/test_runner.py
-bash ../contrib/testing/regtest-simulation.sh
-python3 ../contrib/testing/verify-blake3-pow.py
+# 2. Run the full corpus.  Skip the 2-hour Bitcoin-inheritance step
+#    with SKIP_BITCOIN_INH=1 if you have already run it once.
+bash ../contrib/testing/tools/run-full-corpus.sh \
+     ../contrib/testing/results/$(date -u +%Y%m%dT%H%M%SZ)
 
-# Phase 11 audit
-bash ../contrib/testing/audit/run-all.sh</pre>
+# 3. Or run individual suites manually.
+./bin/test_bitcoin --run_test=b3pow_scratch_tests
+./bin/test_bitcoin --run_test=b3pow_cache_tests
+python3 ../contrib/testing/verify-b3pow.py
+python3 ../test/functional/feature_b3pow.py
+bash   ../contrib/testing/audit/run-all.sh
+bash   ../contrib/testing/compare/run-all-compare.sh</pre>
 </section>
 
 <div class="page-nav">

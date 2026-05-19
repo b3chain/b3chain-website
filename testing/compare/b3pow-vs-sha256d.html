@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; B3PoW-Scratch vs SHA-256d (PoW-level)</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  <a href="/testing/compare.html">BLAKE3 vs SHA-256</a> /
+  B3PoW-Scratch vs SHA-256d
+</div>
+
+<header>
+  <h1>B3PoW-Scratch v1.1 vs SHA-256d &mdash; PoW-level comparison</h1>
+  <p class="subtitle">
+    Companion to the BLAKE3-primitive throughput pages. This one zooms
+    out from "how fast is the inner hash" to "what does an ASIC have
+    to do to beat a commodity CPU on this PoW?".
+  </p>
+  <div class="tagrow">
+    <span class="pill">Source: <b>compare-b3pow-vs-sha256d.md</b></span>
+    <span class="pill">Spec: <b>contrib/miner/b3miner-rtl/SPEC.md</b></span>
+    <span class="pill">Type: <b>data-only</b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<section>
+  <h2>1. Side-by-side</h2>
+  <table>
+    <thead>
+      <tr><th>Property</th><th>SHA-256d (Bitcoin)</th><th>B3PoW-Scratch v1.1 (B3Chain)</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Inner round function</td>
+        <td>SHA-256 (Merkle-Damgard)</td>
+        <td>BLAKE3 (Bao tree)</td>
+      </tr>
+      <tr>
+        <td>State per attempt</td>
+        <td>32 bytes</td>
+        <td><b>1 048 576 bytes</b> (1 MB scratchpad)</td>
+      </tr>
+      <tr>
+        <td>Lanes</td>
+        <td>1</td>
+        <td>8 (4-way mixed)</td>
+      </tr>
+      <tr>
+        <td>Inner rounds per nonce</td>
+        <td>2</td>
+        <td>2048 outer &times; 2 inner = <b>4096</b></td>
+      </tr>
+      <tr>
+        <td>Memory bandwidth required</td>
+        <td>trivial (fits in L1)</td>
+        <td>8 lanes &times; 64 B = ~512 B / attempt of working set,
+            dominated by ~1 MB pad re-reads</td>
+      </tr>
+      <tr>
+        <td>Time per attempt on CPU (single thread, median)</td>
+        <td>~1.5 &micro;s</td>
+        <td>~700 &micro;s</td>
+      </tr>
+      <tr>
+        <td>ASIC speed-up upper bound vs 1-thread CPU</td>
+        <td>~10<sup>7</sup>&times; (mature market, custom ALUs)</td>
+        <td>bounded by on-die SRAM / HBM bandwidth; commercially
+            typical 1-3 GB/s per chip &asymp;
+            <b>~10<sup>3</sup>-10<sup>3.5</sup>&times;</b>, not
+            10<sup>7</sup>&times;</td>
+      </tr>
+      <tr>
+        <td>Verifier wall-clock budget</td>
+        <td>none (verification is microseconds)</td>
+        <td><b>50 ms</b> per header
+            (<code>consensus.b3pow_verify_budget_ms</code>)</td>
+      </tr>
+      <tr>
+        <td>Verifier cache</td>
+        <td>not needed</td>
+        <td>per-<code>prev_block_hash</code> LRU
+            (<code>b3pow::Cache</code>), 4 entries by default
+            (&asymp; 4 MB resident)</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>2. Why this matters</h2>
+  <p>
+    The headline number is the <b>ASIC speed-up upper bound</b>. A
+    SHA-256d ASIC ekes out enormous gains because the algorithm fits
+    inside a single 32-byte register file; the entire pipeline can be
+    made combinational and pipelined to 1-3 GHz with O(10<sup>4</sup>)
+    parallel pipelines on one die.
+  </p>
+  <p>
+    A B3PoW-Scratch ASIC cannot do that: every nonce needs to read
+    megabytes of memory in a data-dependent pattern, and the silicon
+    real estate that would otherwise go to "more pipelines" instead
+    has to be spent on more SRAM. The ASIC advantage caps near the
+    <b>memory-bandwidth-per-watt</b> frontier, which the GPU/CPU
+    market is already on.
+  </p>
+</section>
+
+<section>
+  <h2>3. Honesty caveats</h2>
+  <ul>
+    <li>The "&asymp; 1 000-3 000&times;" ceiling is an upper-bound
+        estimate from analogous memory-bound PoW deployments (RandomX,
+        Equihash 144/5). Real B3PoW-Scratch ASICs are not deployed at
+        scale at the time of writing, so this number will be refined
+        as data appears.</li>
+    <li>Memory-hardness is a <em>defense in depth</em> layer on top of
+        the identity-hash isolation audited at
+        <a href="/testing/audit-pow-isolation.html">H-1</a> &mdash; it
+        does not make a weak PoW algorithm strong, it makes a strong
+        PoW algorithm harder to ASIC.</li>
+    <li>Wall-clock budget enforcement
+        (<code>b3pow_verify_budget_ms</code>) and the HEADERS
+        verification cap (<code>MAX_B3POW_VERIFY_PER_BATCH</code>) are
+        audited separately at
+        <a href="/testing/audit-pow-isolation.html#h-1-1">H-1.1</a> and
+        <a href="/testing/audit-pow-isolation.html#h-1-3">H-1.3</a>;
+        this page only covers the algorithmic comparison.</li>
+    <li>The primitive throughput cards (<a href="pow-throughput.html">pow-throughput</a>,
+        <a href="block-validation.html">block-validation</a>) still
+        measure the BLAKE3 round-function in isolation. They are
+        useful because BLAKE3 is the inner function of B3PoW-Scratch,
+        but they are not the chain-level number.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>4. Source files</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">
+        contrib/miner/b3miner-rtl/SPEC.md</a> &mdash; normative algorithm spec</li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/compare/compare-b3pow-vs-sha256d.md">
+        contrib/testing/compare/compare-b3pow-vs-sha256d.md</a> &mdash; this page's source</li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/crypto/b3pow_scratch.cpp">
+        src/crypto/b3pow_scratch.cpp</a> &mdash; the C++ port</li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/crypto/b3pow_cache.cpp">
+        src/crypto/b3pow_cache.cpp</a> &mdash; <code>b3pow::Cache</code></li>
+  </ul>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/testing/compare/collision-margin.html">Collision margin (MD vs Bao)</a>
+  <a class="next" href="/testing/compare.html">Compare hub</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

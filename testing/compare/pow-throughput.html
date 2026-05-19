@@ -20,10 +20,14 @@
 </div>
 
 <header>
-  <h1>Hash throughput &mdash; SHA-256 vs BLAKE3</h1>
+  <h1>Hash primitive throughput &mdash; SHA-256 vs BLAKE3</h1>
   <p class="subtitle">
     How many hashes per second each algorithm achieves on the host CPU,
     single-threaded and N-threaded, with and without BLAKE3 SIMD lanes.
+    This is a <em>primitive</em> benchmark; b3chain's actual PoW
+    (B3PoW-Scratch&nbsp;v1.1) is memory-hard and is compared at the
+    PoW level on
+    <a href="b3pow-vs-sha256d.html">B3PoW-Scratch vs SHA-256d</a>.
   </p>
   <div class="tagrow">
     <span class="pill">Script: <b>compare-pow-throughput.py</b></span>
