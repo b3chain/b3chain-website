@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; B3PoW-Scratch v1.1</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .chart-figure {
+      margin: 16px 0;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #fafafa;
+    }
+    .chart-figure img,
+    .chart-figure object {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      margin: 0 auto;
+    }
+    .chart-figure figcaption {
+      font-size: 13px;
+      color: #555;
+      margin-top: 8px;
+      text-align: center;
+    }
+    .preliminary {
+      border-left: 3px solid #c80;
+      background: #fff8e6;
+      padding: 10px 12px;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    .preliminary b { color: #a60; }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="index.html">b3chain</a> / B3PoW-Scratch v1.1
+</div>
+
+<header>
+  <h1>B3PoW-Scratch v1.1</h1>
+  <p class="subtitle">
+    The proof-of-work algorithm that runs B3Chain. Memory-hard, BLAKE3-based,
+    designed to be FPGA-economical and GPU-hostile &mdash; not ASIC-proof.
+  </p>
+
+  <div class="tagrow">
+    <span class="pill">Scratchpad: <b>1&nbsp;MB on-chip</b></span>
+    <span class="pill">Lanes: <b>8 × 128&nbsp;KB</b></span>
+    <span class="pill">Iterations: <b>2048 per hash</b></span>
+    <span class="pill">Primitive: <b>BLAKE3 (2-round + full)</b></span>
+  </div>
+
+  <p class="canonical">
+    Spec: <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">contrib/miner/b3miner-rtl/SPEC.md</a>
+    &middot; Whitepaper: <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/whitepaper/B3POW-SCRATCH-WHITEPAPER.md">doc/whitepaper/B3POW-SCRATCH-WHITEPAPER.md</a>
+  </p>
+</header>
+
+<main class="split">
+
+<section>
+  <h2>What B3PoW-Scratch is, in one paragraph</h2>
+  <p>
+    A 256-bit proof-of-work function over an 80-byte Bitcoin-style block
+    header. The hash is computed by initialising a 1&nbsp;MB scratchpad
+    deterministically from the parent block hash (a one-time cost
+    amortised across many nonces), then running 2&nbsp;048 sequential
+    read&ndash;modify&ndash;write iterations across 8 parallel lanes
+    (each lane owns 128&nbsp;KB of the scratchpad), and finally hashing
+    the per-lane state plus the nonce into a 32-byte output. The mixing
+    primitive is a 2-round reduced BLAKE3 compress; the final
+    compression is the standard 7-round BLAKE3. See
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">SPEC.md &sect;5&ndash;&sect;7</a>
+    for the byte-level definition.
+  </p>
+
+  <h3>What it is &mdash; and is not</h3>
+  <p>
+    <b>Is:</b> a memory-hard, data-dependent PoW with a 1&nbsp;MB
+    on-chip working set, designed so the most economical implementation
+    is a single-chip FPGA with on-chip block RAM (B3Miner-1 reference
+    card, &asymp;&nbsp;10&nbsp;W, &lt;&nbsp;$300 BoM target). Reference
+    implementations in Python, C++, TypeScript and SystemVerilog all
+    ship in-tree and are byte-equivalent.
+  </p>
+  <p>
+    <b>Is not:</b> "ASIC-proof", "perfectly decentralized", or
+    permanently resistant to specialized hardware. No PoW is. The
+    design goal is to shift the economic frontier toward small,
+    low-power FPGA cards and away from the SHA-256d ASIC monoculture.
+    Custom B3PoW ASICs are possible; the
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/analysis/ASIC-ECONOMICS.md">economic-rationality analysis</a>
+    is published openly.
+  </p>
+
+  <div class="hr"></div>
+
+  <h2>Reference implementations (all four must stay byte-equivalent)</h2>
+  <div class="kvs">
+    <div>Python (canonical)</div><div><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/ref/b3pow_ref.py">contrib/miner/b3miner-rtl/ref/b3pow_ref.py</a></div>
+    <div>C++ (consensus)</div><div><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/crypto/b3pow_scratch.cpp">src/crypto/b3pow_scratch.cpp</a></div>
+    <div>TypeScript (pool, browser)</div><div><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testnet/pool/src/lib/b3pow-scratch.ts">contrib/testnet/pool/src/lib/b3pow-scratch.ts</a></div>
+    <div>SystemVerilog (FPGA)</div><div><a href="https://github.com/b3chain/b3chain/tree/b3chain-main/contrib/miner/b3miner-rtl/src">contrib/miner/b3miner-rtl/src/</a></div>
+    <div>Vectors (CI gate)</div><div><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/test/data/b3pow_consensus_vectors.json">src/test/data/b3pow_consensus_vectors.json</a></div>
+  </div>
+
+  <div class="hr"></div>
+
+  <h2>Throughput by backend</h2>
+
+  <div class="preliminary">
+    <b>Preliminary.</b> The numbers below are the first authoritative
+    bench run (<code>results/r0/</code>). The CPU rows are real
+    measurements on the bench machine documented in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/bench/results/r0/HARDWARE.md">HARDWARE.md</a>.
+    The FPGA row is a <em>synthetic placeholder</em> matching the
+    algebraic estimate in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/analysis/FPGA-FEASIBILITY.md">FPGA-FEASIBILITY.md</a>;
+    it will be replaced by a real B3Miner-1 telemetry row at bring-up.
+    See
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/bench/methodology.md">methodology.md</a>
+    for what was held constant and how to reproduce.
+  </div>
+
+  <figure class="chart-figure">
+    <object data="assets/charts/r0/hashrate-by-backend.svg" type="image/svg+xml"
+            aria-label="Full-PoW throughput by backend, log-x bar chart">
+      <a href="assets/charts/r0/hashrate-by-backend.svg">
+        hashrate-by-backend (open SVG)
+      </a>
+    </object>
+    <figcaption>
+      Full-PoW throughput per backend (log scale). Python reference is
+      single-digit H/s/core by design; C++ consensus impl is ~30&times;
+      faster; FPGA target is ~10<sup>6</sup>&times; faster again.
+    </figcaption>
+  </figure>
+
+  <div class="hr"></div>
+
+  <h2>Verifier latency (single-block)</h2>
+  <p>
+    The most operationally-important number: how long a full node spends
+    checking the PoW of one inbound block. Spec target
+    (<a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">SPEC &sect;8.E</a>):
+    p95 &lt; 50&nbsp;ms on a modern x86_64 core, so PoW verification
+    stays well under 1&nbsp;% of the 10-minute block interval.
+  </p>
+
+  <figure class="chart-figure">
+    <object data="assets/charts/r0/verify-latency.svg" type="image/svg+xml"
+            aria-label="Verifier latency p50 / p95 / p99 with SPEC target dashed line">
+      <a href="assets/charts/r0/verify-latency.svg">
+        verify-latency (open SVG)
+      </a>
+    </object>
+    <figcaption>
+      Verifier latency at p50 / p95 / p99 across a deterministic
+      10&nbsp;000-header corpus (seed&nbsp;<code>0xB3110002</code>). The
+      Python reference row shown here is the correctness floor, not the
+      C++ verifier; that bench populates on first
+      <code>bench-b3pow-cpp</code> run.
+    </figcaption>
+  </figure>
+
+  <div class="hr"></div>
+
+  <h2>Raw results &amp; reproducibility</h2>
+  <p>
+    Every CSV row that produced these charts is committed in-tree:
+  </p>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/tree/b3chain-main/contrib/testing/bench/results/r0">results/r0/</a> &mdash; canonical first run (CPU + verify + FPGA-dry)</li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/bench/methodology.md">methodology.md</a> &mdash; what we measure, what we hold constant, honesty notes</li>
+    <li><a href="https://github.com/b3chain/b3chain/tree/b3chain-main/contrib/testing/bench">contrib/testing/bench/</a> &mdash; full bench suite (cpu, cpp, fpga, verify) + chart generator</li>
+  </ul>
+  <p class="small">
+    The dry-run FPGA row is intentionally distinguished so charts can
+    colour it differently; live FPGA numbers populate when the
+    B3Miner-1 card reaches bench bring-up. We commit empty
+    (header-only) CSVs for benches without measured rows yet rather
+    than make up numbers.
+  </p>
+</section>
+
+<aside>
+  <h2>Quick links</h2>
+  <ul>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/whitepaper/B3POW-SCRATCH-WHITEPAPER.md">Whitepaper (MD source)</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">SPEC.md</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/ref/b3pow_ref.py">Python reference impl</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/crypto/b3pow_scratch.cpp">C++ consensus impl</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/tree/b3chain-main/doc/analysis">FPGA &amp; ASIC analysis</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/tree/b3chain-main/doc/economics">Economics docs</a></li>
+    <li><a href="https://github.com/b3chain/b3chain/tree/b3chain-main/doc/security">Security analyses</a></li>
+    <li><a href="testnet.html">Testnet page</a></li>
+    <li><a href="testing.html">Testing &amp; verification hub</a></li>
+  </ul>
+
+  <h2 style="margin-top:18px">Bench corner</h2>
+  <div class="kvs">
+    <div>Run</div><div><code>r0</code> (first authoritative)</div>
+    <div>Corpus seed</div><div><code>0xB3110002</code></div>
+    <div>Verifier target</div><div>p95 &lt; 50&nbsp;ms (C++ impl)</div>
+    <div>FPGA estimate</div><div>~8&nbsp;MH/s @ 200&nbsp;MHz, 8 lanes</div>
+  </div>
+  <p class="small" style="margin-top:8px">
+    Numbers refresh whenever
+    <a href="https://github.com/b3chain/b3chain/actions/workflows/benchmark.yml">.github/workflows/benchmark.yml</a>
+    completes a successful run on <code>b3chain-main</code>.
+  </p>
+
+  <h2 style="margin-top:18px">Honesty notes</h2>
+  <ul>
+    <li>We publish slow Python rows on purpose; they are the
+        correctness floor, not a competitive miner.</li>
+    <li>Dry-run FPGA rows are clearly marked; charts colour them
+        differently and the
+        <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/bench/methodology.md">methodology</a>
+        documents exactly when they apply.</li>
+    <li>J/hash columns are <code>NaN</code> unless an out-of-band
+        wall-power reading is wired in.</li>
+  </ul>
+</aside>
+
+</main>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+
+<script>
+  document.getElementById("y").textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
