@@ -116,16 +116,22 @@ python3 contrib/testing/verify-b3pow.py</pre>
   PASS: b3pow_ref deterministic (zero-header)
 
 [2/3] B3PoW-Scratch consensus vectors
-  Loaded schema_version=1, spec_version=0x00010100
+  Loaded schema_version=1, spec_version=0x00010101
   PASS: spec_version matches b3pow_ref
-  PASS: genesis_zero_prev: b3pow_scratch hash
-  PASS: genesis_zero_prev: pow_hash &lt;= target
+  PASS: genesis_mainnet_template: b3pow_scratch hash
+  PASS: genesis_mainnet_template: pow_hash &lt;= target
+  PASS: genesis_regtest: b3pow_scratch hash
+  PASS: genesis_regtest: pow_hash &lt;= target
+  PASS: mainnet_target_loose_pass: b3pow_scratch hash
+  PASS: mainnet_target_loose_pass: pow_hash &lt;= target
+  PASS: mainnet_target_tight_fail: b3pow_scratch hash
+  PASS: mainnet_target_tight_fail: pow_hash &lt;= target
   PASS: nontrivial_prev: b3pow_scratch hash
   PASS: nontrivial_prev: pow_hash &lt;= target
-  PASS: target_boundary: b3pow_scratch hash
-  PASS: target_boundary: pow_hash &lt;= target
-  PASS: cache_pair_first: b3pow_scratch hash
-  PASS: cache_pair_second_nonce: b3pow_scratch hash
+  PASS: cache_pair_nonce_0: b3pow_scratch hash
+  PASS: cache_pair_nonce_0: pow_hash &lt;= target
+  PASS: cache_pair_nonce_1: b3pow_scratch hash
+  PASS: cache_pair_nonce_1: pow_hash &lt;= target
 
 [3/3] Live block verification
   SKIP: no --rpc-port specified

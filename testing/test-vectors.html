@@ -35,7 +35,7 @@
   <h2>1. Algorithm under test</h2>
   <div class="kvs">
     <div>Algorithm</div><div><b>B3PoW-Scratch v1.1</b></div>
-    <div>SPEC_VERSION</div><div><code>0x00010100</code></div>
+    <div>SPEC_VERSION</div><div><code>0x00010101</code></div>
     <div>Scratchpad size</div><div>1 048 576 bytes (1&nbsp;MiB) per parent</div>
     <div>Lanes</div><div>8</div>
     <div>Outer iterations</div><div>2048</div>
@@ -68,45 +68,45 @@
     <tbody>
       <tr>
         <td><code>genesis_mainnet_template</code></td>
-        <td>locks the JSON schema against the mainnet genesis-style header</td>
+        <td>locks the JSON schema against the mainnet genesis-style header (post-F-6, <code>nBits = 0x1d7fffff</code>)</td>
         <td class="hash">000...000</td>
-        <td class="hash">c25b21f44fbd8b55e512e895bd56c71837a3220eba20d7728334158f146b8530</td>
+        <td class="hash">50c8c8def866529c7637868d175ec80dafcc59ed5a375abb8b2fdb5b53a15c77</td>
       </tr>
       <tr>
         <td><code>genesis_regtest</code></td>
         <td>regtest powLimit is loose (<code>0x207fffff</code>) so any hash passes</td>
         <td class="hash">000...000</td>
-        <td class="hash">901975901cc50adc8321535638eff4805d3689cc74d8b68f0c2cf12d13da28e5</td>
+        <td class="hash">1822743d5bfed8eeac80117b4536e116597c29453b21582950c5f0357b9ffe63</td>
       </tr>
       <tr>
         <td><code>mainnet_target_loose_pass</code></td>
-        <td>mainnet powLimit (<code>0x1e01ffff</code>) with the loose target</td>
+        <td>mainnet powLimit (<code>0x1d7fffff</code>, post-F-6) with the loose target</td>
         <td class="hash">000...000</td>
-        <td class="hash">caf96433bf0ae33ca4b664184afcb86e76aa0a57b97ec6e215d9e5fd5f0a0e38</td>
+        <td class="hash">5c889fa7c5be894c135b4c1348cddb14beeef2dc5295613afc6ba68fe9ee9c37</td>
       </tr>
       <tr>
         <td><code>mainnet_target_tight_fail</code></td>
         <td>synthetic <code>target=1</code> &mdash; expected to fail PoW with overwhelming probability</td>
         <td class="hash">000...000</td>
-        <td class="hash">caf96433bf0ae33ca4b664184afcb86e76aa0a57b97ec6e215d9e5fd5f0a0e38</td>
+        <td class="hash">5c889fa7c5be894c135b4c1348cddb14beeef2dc5295613afc6ba68fe9ee9c37</td>
       </tr>
       <tr>
         <td><code>nontrivial_prev</code></td>
         <td>same header as <code>mainnet_target_loose_pass</code>, non-zero <code>prev_block_hash</code>: pow_hash MUST differ</td>
         <td class="hash">deadbeef...3210</td>
-        <td class="hash">4d49c9a28416ce87a137729dd152466746147e7cd7d5319a429c5aec43c98303</td>
+        <td class="hash">4d82fe20390d36016f2ee9a0cfd447e92cac70528047f653db719862ed3931bf</td>
       </tr>
       <tr>
         <td><code>cache_pair_nonce_0</code></td>
         <td>first member of a same-parent pair, exercises the LRU scratchpad cache (H-1.2)</td>
         <td class="hash">0102...1f20</td>
-        <td class="hash">d683c6dfdc0398824c4975ae4cb105503c07018424cba1993ce9b378c667ce4b</td>
+        <td class="hash">c9b61079e2e50c4dacc51af107043d4a0b47c84945bc8d6d1df6b801b6430313</td>
       </tr>
       <tr>
         <td><code>cache_pair_nonce_1</code></td>
         <td>second member of the cache pair (nonce=1) &mdash; C++ test asserts this is served from the cache after the first</td>
         <td class="hash">0102...1f20</td>
-        <td class="hash">3fbf4bd5138cd80ef3eb5548e2950352d2b8ab3846e99d2f1f9b09b0b498f0ce</td>
+        <td class="hash">fa6993083b67ebb0a4876f65d94ded886fb75e46cab7f4283ca7c13abbf89e18</td>
       </tr>
     </tbody>
   </table>
@@ -134,7 +134,7 @@
       <tr><td><code>hashPrevBlock</code></td><td>32 bytes, uint256 LE (seeds the 1&nbsp;MB scratchpad)</td></tr>
       <tr><td><code>hashMerkleRoot</code></td><td>32 bytes, uint256 LE</td></tr>
       <tr><td><code>nTime</code></td><td>uint32 LE</td></tr>
-      <tr><td><code>nBits</code></td><td>compact target (e.g. <code>0x1e01ffff</code> on mainnet, <code>0x207fffff</code> on regtest)</td></tr>
+      <tr><td><code>nBits</code></td><td>compact target (e.g. <code>0x1d7fffff</code> on mainnet, post-F-6; <code>0x207fffff</code> on regtest)</td></tr>
       <tr><td><code>nNonce</code></td><td>uint32 LE; the miner varies this</td></tr>
     </tbody>
   </table>
