@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; B3PoW-Scratch live demo</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/assets/b3pow-demo.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  B3PoW-Scratch live demo
+</div>
+
+<header>
+  <h1>B3PoW-Scratch live demo</h1>
+  <p class="subtitle">
+    Six small interactive pieces that show what B3PoW-Scratch actually
+    does: a step-through of one BLAKE3 round, a visual sketch of the
+    scratchpad mutation loop, a live mini-feed of the b3chain testnet,
+    a real in-browser hash that matches the C++ consensus validator
+    byte-for-byte, and a couple of helpers (faucet, wallet config) for
+    actually trying the chain. Nothing on this page promises anything
+    about price, hashrate, or production readiness; this is for
+    understanding, not security.
+  </p>
+  <div class="tagrow">
+    <span class="pill">PoW: <b>B3PoW-Scratch v1.1</b></span>
+    <span class="pill">Spec: <b><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">SPEC.md</a></b></span>
+    <span class="pill">Reference: <b><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/ref/b3pow_ref.py">b3pow_ref.py</a></b></span>
+    <span class="pill">Testnet: <b><a href="/testnet.html">testnet.html</a></b></span>
+  </div>
+  <div class="warn">
+    <b>What this is and isn't.</b> Components 1, 2, and 4 run on your
+    machine and are useful for explaining the algorithm. Component 3
+    is a passive read of the public testnet. Components 5 and 6 are
+    light convenience wrappers around services that already exist
+    (faucet, wallet) &mdash; the wallet config in particular is a
+    documentation blob, not a one-click integration; see its
+    inline notes.
+  </div>
+</header>
+
+<div class="content">
+
+<!-- ================================================================ -->
+<!-- Component 1: BLAKE3 round demo                                   -->
+<!-- ================================================================ -->
+<section id="blake3" class="desktop-only">
+  <h2>1. BLAKE3 round, step by step <a class="anchor" href="#blake3">#</a></h2>
+
+  <div class="why">
+    <b>Why this matters.</b> Every operation in B3PoW-Scratch is a
+    BLAKE3 round (full inside the scratchpad init and the final hash,
+    reduced to 2 rounds inside the mix step). One round is 8 quarter-round
+    <code>G(...)</code> calls applied to a 16-word state: first 4 columns,
+    then 4 diagonals. After 7 rounds the state is finalised. The cells
+    of the state matrix below light up the moment a <code>G(...)</code>
+    touches them, so the diffusion pattern (how a change in one cell
+    spreads to all 16) is visible by eye.
+  </div>
+
+  <p class="small">
+    Definition: <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md#4-blake3-primitive">SPEC §4</a> &middot;
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/ref/b3pow_ref.py#L124-L146"><code>b3pow_ref.py::g</code></a>
+  </p>
+
+  <div class="desktop-only-msg">
+    The interactive state grid does not fit on small screens. Open this
+    page on a tablet or desktop (&geq; 768 px) to play with the demo,
+    or read <code>SPEC.md §4</code> directly.
+  </div>
+
+  <p class="small" style="margin-top:8px">
+    BLAKE3 internal state (16 &times; 32-bit words, arranged 4 &times; 4):
+  </p>
+  <div class="b3-state" id="b3-state" aria-label="BLAKE3 internal state, 16 32-bit words arranged in a 4 by 4 grid"></div>
+
+  <p class="small" style="margin-top:12px">
+    Message words <code>m[0..15]</code> (editable, hex):
+  </p>
+  <div class="b3-msg" id="b3-msg" aria-label="BLAKE3 message block, 16 32-bit words; editable"></div>
+
+  <p class="small" style="margin-top:12px">
+    The 8 <code>G(...)</code> calls per round &mdash; <span style="color:#1a5a8e">columns 0&ndash;3</span>, <span style="color:#8e4a1a">diagonals 4&ndash;7</span>:
+  </p>
+  <div class="b3-gs" id="b3-gs"></div>
+
+  <div class="controls">
+    <button id="b3-btn-step-g">Step 1 G</button>
+    <button id="b3-btn-step-round">Step 1 round (8 Gs)</button>
+    <button id="b3-btn-complete">Complete (7 rounds)</button>
+    <button id="b3-btn-reset">Reset to canonical example</button>
+  </div>
+  <div class="b3-step" id="b3-step"></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- Component 2: Scratchpad mutation animation                       -->
+<!-- ================================================================ -->
+<section id="scratchpad" class="desktop-only">
+  <h2>2. Scratchpad mutation loop <a class="anchor" href="#scratchpad">#</a></h2>
+
+  <div class="why">
+    <b>Why this matters.</b> B3PoW-Scratch's GPU-hostility comes from
+    8 lanes hammering 8 read-modify-write cursors against a 1 MiB
+    on-chip scratchpad in parallel. Below is one row per lane (8 rows),
+    256 cells per row (each cell = 512 B = 8 BLAKE3 blocks). The blue
+    cursors hop to data-dependent addresses; the orange flash marks a
+    write. This is a <b>visualisation only</b>: real B3PoW hashes
+    mutate ~10<sup>4</sup> cells per millisecond, which at honest speed
+    would just be a uniformly-flashing grid. See SPEC §6.3 (addressing),
+    §6.4 (read), §6.6 (write).
+  </div>
+
+  <p class="small">
+    Reference: <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md#63-derive_addresseslanes-r---uint11lanes">SPEC §6.3&ndash;§6.6</a>
+  </p>
+
+  <div class="desktop-only-msg">
+    The animation is wider than a phone screen. Open this page on a
+    tablet or desktop to see it.
+  </div>
+
+  <div class="pad-wrap">
+    <canvas class="pad-canvas" id="pad-canvas"></canvas>
+  </div>
+  <div class="controls">
+    <button id="pad-play">Play</button>
+    <button id="pad-pause">Pause</button>
+    <button id="pad-reset">Reset</button>
+    <label>Speed:
+      <input type="number" id="pad-speed" min="1" max="60" value="6" step="1" style="width:60px"/>
+      &nbsp;<span class="muted">writes / s / lane</span>
+    </label>
+  </div>
+  <div class="pad-legend">
+    <span class="sw" style="background:#1a5a8e"></span>cursor &middot;
+    <span class="sw" style="background:rgba(199,155,58,0.85)"></span>just-written (fading) &middot;
+    <span class="sw" style="background:#f0f0f0"></span>cold &middot;
+    1 row = 1 lane (128 KiB), 1 cell = 512 B
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- Component 3: Live testnet status                                 -->
+<!-- ================================================================ -->
+<section id="live">
+  <h2>3. Live testnet hashrate <a class="anchor" href="#live">#</a></h2>
+
+  <div class="why">
+    <b>Why this matters.</b> Everything else on this page runs in your
+    browser; this card is the only live network read. Numbers come from
+    <a href="/testnet-status.json"><code>/testnet-status.json</code></a>
+    (refreshed every 60 s, same feed that
+    <a href="/testnet.html">testnet.html</a> uses). If the file goes
+    stale or unreachable the panel shows a graceful "unavailable" note
+    instead of breaking the rest of the page.
+  </div>
+
+  <div id="mini-status-wrap">
+    <div class="mini-status" id="mini-status">
+      <div class="mini-card">
+        <div class="lbl">Block height</div>
+        <div class="val" id="ms-height">&hellip;</div>
+      </div>
+      <div class="mini-card">
+        <div class="lbl">Difficulty</div>
+        <div class="val" id="ms-diff">&hellip;</div>
+      </div>
+      <div class="mini-card">
+        <div class="lbl">Network hashrate</div>
+        <div class="val" id="ms-hps">&hellip;</div>
+      </div>
+      <div class="mini-card">
+        <div class="lbl">Pool workers</div>
+        <div class="val" id="ms-workers">&hellip;</div>
+      </div>
+    </div>
+
+    <table class="mini-blocks" id="mini-blocks">
+      <thead><tr><th>Height</th><th>Age</th><th>Tx</th></tr></thead>
+      <tbody><tr><td colspan="3" class="muted">loading&hellip;</td></tr></tbody>
+    </table>
+    <div class="mini-meta" id="mini-meta">&nbsp;</div>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- Component 4: Hash-once playground                                -->
+<!-- ================================================================ -->
+<section id="playground">
+  <h2>4. Hash one header in your browser <a class="anchor" href="#playground">#</a></h2>
+
+  <div class="why">
+    <b>Why this matters.</b> This is real B3PoW-Scratch, byte-identical
+    to the C++ validator in <code>b3chaind</code> and the RTL on the
+    FPGA mining card. It hashes a canonical header from the consensus
+    vectors (<a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/test/data/b3pow_consensus_vectors.json"><code>src/test/data/b3pow_consensus_vectors.json</code></a>)
+    and compares against the expected output. First click takes a few
+    seconds (1 MiB BLAKE3-XOF scratchpad warm-up); subsequent clicks
+    on the same prev_hash reuse the pad. The compute runs in a Web
+    Worker so the page stays responsive. Source:
+    <a href="/assets/b3pow-scratch.js"><code>/assets/b3pow-scratch.js</code></a>.
+  </div>
+
+  <div class="hash-row">
+    <span class="k">vector:</span>
+    <span class="v" id="hp-name"></span>
+    <span class="k">header (80 B):</span>
+    <span class="v" id="hp-header"></span>
+    <span class="k">prev_hash (32 B):</span>
+    <span class="v" id="hp-prev"></span>
+    <span class="k">expected:</span>
+    <span class="v" id="hp-expected"></span>
+    <span class="k">got:</span>
+    <span class="v" id="hp-got" style="color:var(--muted)">(not run yet)</span>
+    <span class="k">time:</span>
+    <span class="v" id="hp-time">&nbsp;</span>
+  </div>
+
+  <div class="controls">
+    <button id="hp-btn-hash">Hash</button>
+  </div>
+  <div class="progress" id="hp-progress" style="display:none"><div></div></div>
+  <div class="banner" id="hp-banner">Click <b>Hash</b> to run B3PoW-Scratch on the embedded consensus vector.</div>
+</section>
+
+<!-- ================================================================ -->
+<!-- Component 5: Faucet UX                                           -->
+<!-- ================================================================ -->
+<section id="faucet">
+  <h2>5. Request test coins <a class="anchor" href="#faucet">#</a></h2>
+
+  <div class="why">
+    <b>Why this matters.</b> The faucet at
+    <a href="https://faucet.b3chain.org">faucet.b3chain.org</a> hands
+    out 0.5 tB3C per request with a 24 h cooldown per IP and per
+    address. This form validates the bech32 prefix client-side and
+    opens the faucet page in a new tab pre-filled with your address.
+    A JSON-API endpoint that would let us post the request and surface
+    the txid here is on the roadmap; until then the actual request
+    happens on the faucet site, and the "watch funds arrive" widget
+    just links you to the explorer.
+  </div>
+
+  <form id="faucet-form" class="faucet-form" autocomplete="off">
+    <input type="text" id="faucet-addr" name="address"
+           placeholder="tb3..."
+           aria-label="B3Chain testnet bech32 address"
+           required />
+    <span class="captcha" title="The actual CAPTCHA lives on faucet.b3chain.org">CAPTCHA on faucet site</span>
+    <button type="submit">Request tB3C</button>
+  </form>
+  <div id="faucet-msg" class="faucet-msg"></div>
+  <div id="faucet-watch" style="display:none;margin-top:10px;font-size:13px;
+                                padding:10px;background:var(--inline-bg);
+                                border-radius:6px"></div>
+</section>
+
+<!-- ================================================================ -->
+<!-- Component 6: Wallet config                                       -->
+<!-- ================================================================ -->
+<section id="wallet">
+  <h2>6. Wallet config <a class="anchor" href="#wallet">#</a></h2>
+
+  <div class="why">
+    <b>Why this matters.</b> Off-the-shelf wallets (Sparrow, Specter,
+    Electrum) don't yet know about b3chain testnet because we haven't
+    upstreamed the network metadata. This page provides a JSON
+    "wallet-config blob" with all the parameters a user needs to plug
+    in manually (network name, magic bytes, ports, address format,
+    bech32 HRP, BIP44 coin type, electrum/RPC endpoints) and a BIP21
+    <code>b3chain:</code> URI that any registered handler will receive.
+    Read the JSON for known limitations &mdash; the public electrum
+    server is not deployed yet, so for now wallet operations work via
+    a self-run <code>b3chaind -chain=test</code> node and the reference
+    CLI.
+  </div>
+
+  <div class="wallet-actions">
+    <a href="/assets/b3chain-testnet.sparrow-config.json"
+       download="b3chain-testnet.sparrow-config.json">Download wallet-config JSON</a>
+    <a id="wallet-bip21" href="#">Open BIP21 URI in registered handler</a>
+    <a href="https://sparrowwallet.com/docs/" target="_blank" rel="noopener">Sparrow docs &rarr;</a>
+    <a href="https://specter.solutions/" target="_blank" rel="noopener">Specter &rarr;</a>
+    <a href="/testnet.html#connect">Run b3chaind testnet locally &rarr;</a>
+  </div>
+
+  <h3>Quick reference</h3>
+  <table>
+    <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Network name</td><td><code>B3Chain testnet</code></td></tr>
+      <tr><td>Chain param</td><td><code>test</code></td></tr>
+      <tr><td>Magic bytes</td><td><code>b3 c1 02 0e</code></td></tr>
+      <tr><td>P2P port</td><td><code>18533</code></td></tr>
+      <tr><td>RPC port</td><td><code>18534</code></td></tr>
+      <tr><td>Bech32 HRP</td><td><code>tb3</code></td></tr>
+      <tr><td>BIP44 coin_type</td><td><code>1</code></td></tr>
+      <tr><td>Electrum server</td><td><code>electrum.b3chain.org:50002</code> <span class="muted">(not yet deployed &mdash; known limitation)</span></td></tr>
+      <tr><td>DNS seed</td><td><code>testnet-seed.b3chain.org</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="page-nav">
+  <a class="prev" href="/index.html">Back to homepage</a>
+  <a class="next" href="/testnet.html">Testnet operator page</a>
+</div>
+
+</div><!-- /.content -->
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.
+     Test B3C has no monetary value.</p>
+</footer>
+
+</div><!-- /.wrap -->
+
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+<script src="/assets/b3pow-scratch.js"></script>
+<script src="/assets/b3pow-demo.js"></script>
+</body>
+</html>

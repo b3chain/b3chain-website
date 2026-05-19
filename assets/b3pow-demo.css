@@ -1,0 +1,149 @@
+/* =============================================================================
+   B3PoW-Scratch demo page — scoped styles.
+   Used by /demo.html. Inherits variables (--bg, --text, --mono, ...) from
+   /css/style.css; this file adds only what's specific to the six interactive
+   demo components. Target: < 200 lines, mobile-friendly.
+   ============================================================================= */
+
+/* "Why this matters" callout (one per component). */
+.why {
+  border-left: 3px solid var(--warn-border);
+  background: var(--warn-bg);
+  padding: 10px 12px;
+  margin: 4px 0 14px;
+  font-size: 13.5px;
+  color: var(--text);
+}
+.why b { color: var(--text); }
+
+/* Control bar -- buttons + inputs together. */
+.controls {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0;
+  align-items: center;
+}
+.controls button, .controls .btn {
+  font-family: var(--mono); font-size: 12px;
+  padding: 6px 12px; border: 1px solid var(--line); border-radius: 5px;
+  background: #fff; color: var(--text); cursor: pointer;
+}
+.controls button:hover, .controls .btn:hover { border-color: var(--accent); }
+.controls button:disabled { opacity: .5; cursor: not-allowed; }
+.controls label { font-size: 12px; color: var(--muted); }
+.controls input[type="text"], .controls input[type="number"] {
+  font-family: var(--mono); font-size: 12px;
+  padding: 5px 8px; border: 1px solid var(--line); border-radius: 4px;
+  background: #fff; color: var(--text);
+}
+
+/* ----- Component 1: BLAKE3 round demo ----- */
+.b3-state {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+  margin-top: 10px;
+}
+.b3-cell {
+  font-family: var(--mono); font-size: 11.5px;
+  padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px;
+  background: #fff; color: var(--text); text-align: center;
+  transition: background-color .25s, border-color .25s;
+}
+.b3-cell .ix { display: block; font-size: 9px; color: var(--muted);
+                text-transform: uppercase; letter-spacing: .05em; }
+.b3-cell.hl-a { background: #e6f1fb; border-color: #4287d6; }
+.b3-cell.hl-b { background: #e6f1fb; border-color: #4287d6; }
+.b3-cell.hl-c { background: #e6f1fb; border-color: #4287d6; }
+.b3-cell.hl-d { background: #e6f1fb; border-color: #4287d6; }
+
+.b3-msg {
+  display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px;
+  margin-top: 8px; font-size: 10.5px;
+}
+.b3-msg input {
+  width: 100%; font-family: var(--mono); font-size: 10.5px;
+  padding: 3px 4px; border: 1px solid var(--line); border-radius: 3px;
+  background: #fff; color: var(--text); text-align: center;
+}
+.b3-msg input.hl-m { background: #fbf2dc; border-color: #c79b3a; }
+
+.b3-gs {
+  margin-top: 8px; font-family: var(--mono); font-size: 11.5px;
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 12px;
+}
+.b3-g { padding: 4px 6px; border: 1px solid transparent; border-radius: 4px;
+        color: var(--muted); }
+.b3-g.col { color: #1a5a8e; }
+.b3-g.diag { color: #8e4a1a; }
+.b3-g.active { background: #fff7d6; border-color: #c79b3a; color: var(--text); font-weight: 600; }
+.b3-step { font-size: 12px; color: var(--muted); margin-top: 6px; font-family: var(--mono); }
+
+/* ----- Component 2: scratchpad animation ----- */
+.pad-wrap { margin-top: 10px; }
+canvas.pad-canvas {
+  width: 100%; max-width: 100%; height: auto;
+  display: block; background: #fff; border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.pad-legend { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.pad-legend .sw {
+  display: inline-block; width: 12px; height: 12px; vertical-align: middle;
+  margin-right: 4px; border-radius: 2px; border: 1px solid var(--line);
+}
+
+/* Mobile collapse: hide canvas-heavy components on narrow viewports. */
+.desktop-only-msg { display: none; padding: 12px; background: var(--warn-bg);
+                    border: 1px solid var(--warn-border); border-radius: 6px;
+                    font-size: 13px; color: var(--muted); }
+@media (max-width: 768px) {
+  .desktop-only .b3-state, .desktop-only .b3-msg, .desktop-only .b3-gs,
+  .desktop-only .controls, .desktop-only .pad-wrap, .desktop-only .b3-step { display: none; }
+  .desktop-only .desktop-only-msg { display: block; }
+}
+
+/* ----- Component 3: live testnet mini-status ----- */
+.mini-status {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px; margin-top: 10px;
+}
+.mini-card { border: 1px solid var(--line); background: #fff; padding: 10px;
+             border-radius: 6px; }
+.mini-card .lbl { font-size: 10.5px; text-transform: uppercase;
+                   letter-spacing: .05em; color: var(--muted); }
+.mini-card .val { font-family: var(--mono); font-size: 15px;
+                   color: var(--text); margin-top: 2px; word-break: break-all; }
+.mini-blocks { width: 100%; margin-top: 10px; font-size: 12px; }
+.mini-blocks th, .mini-blocks td { padding: 5px 8px; }
+.mini-blocks td { font-family: var(--mono); border-bottom: 1px dashed var(--line); }
+.mini-meta { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+
+/* ----- Component 4: hash playground ----- */
+.hash-row { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px;
+            font-size: 13px; margin: 4px 0; }
+.hash-row .k { color: var(--muted); }
+.hash-row .v { font-family: var(--mono); font-size: 12px; word-break: break-all; }
+.banner { padding: 10px 14px; border-radius: 6px; font-size: 14px; margin-top: 10px;
+          border: 1px solid var(--line); background: #fff; color: var(--muted); }
+.banner.ok   { background: #e0f0e0; border-color: #5fa05f; color: var(--pass); }
+.banner.bad  { background: #f0e0e0; border-color: #a05a5a; color: var(--fail); }
+.banner.busy { background: var(--warn-bg); border-color: var(--warn-border); color: var(--pending); }
+.progress { height: 6px; background: var(--inline-bg); border-radius: 3px;
+            overflow: hidden; margin-top: 6px; }
+.progress > div { height: 100%; background: var(--accent); width: 0%;
+                  transition: width .15s linear; }
+
+/* ----- Component 5: faucet ----- */
+.faucet-form { display: grid; grid-template-columns: 1fr auto auto; gap: 8px;
+               margin-top: 10px; align-items: center; }
+.faucet-form input[type="text"] { font-family: var(--mono); font-size: 13px;
+                                   padding: 8px 10px; border: 1px solid var(--line);
+                                   border-radius: 4px; background: #fff; }
+.faucet-form .captcha { font-size: 12px; color: var(--muted); padding: 4px 10px;
+                         border: 1px dashed var(--line); border-radius: 4px;
+                         background: var(--inline-bg); }
+@media (max-width: 540px) { .faucet-form { grid-template-columns: 1fr; } }
+.faucet-msg { margin-top: 8px; font-size: 13px; }
+
+/* ----- Component 6: wallet ----- */
+.wallet-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.wallet-actions a { display: inline-block; padding: 8px 14px; border: 1px solid var(--line);
+                     border-radius: 5px; background: #fff; color: var(--text);
+                     text-decoration: none; font-size: 13px; }
+.wallet-actions a:hover { border-color: var(--accent); }

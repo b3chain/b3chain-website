@@ -1,0 +1,87 @@
+{
+  "_comment": "B3Chain testnet wallet configuration blob. Not a Sparrow-native import format (Sparrow has no first-class support for custom networks at this time); this is a documented bundle of the settings a user needs to plug into Sparrow / Specter / Electrum or any compatible wallet to talk to the b3chain testnet. The OPERATOR-SIDE electrum server endpoint is a KNOWN LIMITATION at launch -- we are still standing up a public electrumx instance; until then, point a wallet at a self-run b3chaind testnet node via the JSON-RPC interface (port 18534).",
+  "schema": "b3chain.wallet-config.v1",
+  "network": {
+    "name": "B3Chain testnet",
+    "id": "b3chain-testnet",
+    "chain_param": "test",
+    "is_testnet": true,
+    "value_disclaimer": "Test B3C has NO monetary value. Do not pay anyone in tB3C and do not accept tB3C as payment."
+  },
+  "magic_bytes_hex": "b3c1020e",
+  "ports": {
+    "p2p":     18533,
+    "rpc":     18534,
+    "stratum": 3333
+  },
+  "address_format": {
+    "bech32_hrp":      "tb3",
+    "p2pkh_prefix":    111,
+    "p2sh_prefix":      196
+  },
+  "bip44": {
+    "coin_type": 1,
+    "_comment": "BIP44 testnet coin_type (1). Mainnet b3chain will register its own coin_type via SLIP-0044 once mainnet ships."
+  },
+  "genesis": {
+    "hash_sha256d_hex": "4b3f758b306086eca0a95c68020ab74cb87c652b1788780fa3235306bb3d4006",
+    "_comment": "SHA-256d block-identity hash of the testnet genesis block. PoW hash uses B3PoW-Scratch (see SPEC.md); block-identity hash is still SHA-256d for Bitcoin compatibility."
+  },
+  "consensus": {
+    "block_interval_s":     600,
+    "block_subsidy_btc":    50.0,
+    "halving_interval":     210000,
+    "difficulty_algorithm": "LWMA-3"
+  },
+  "endpoints": {
+    "dns_seed":       "testnet-seed.b3chain.org",
+    "explorer_url":   "https://explorer.b3chain.org",
+    "faucet_url":     "https://faucet.b3chain.org",
+    "pool_stratum":   "stratum+tcp://pool.b3chain.org:3333",
+    "status_json":    "https://b3chain.org/testnet-status.json",
+    "electrum_server": {
+      "host": "electrum.b3chain.org",
+      "port": 50002,
+      "tls":  true,
+      "_comment": "PLACEHOLDER -- electrum server is not yet deployed for testnet. Wallet integration via Sparrow / Electrum / Specter will work once this endpoint is live; until then, use a wallet that supports a direct b3chaind RPC backend (port 18534 above), or use the reference CLI shipped with b3chaind."
+    },
+    "seed_nodes": [
+      "166.88.4.250:18533",
+      "151.158.1.22:18533",
+      "151.158.1.60:18533"
+    ]
+  },
+  "uri_scheme": {
+    "name":   "b3chain",
+    "_comment": "URI scheme matching BIP21 for payment requests. A registered wallet will handle URIs of the form 'b3chain:tb3...?amount=0.01&label=Demo'. Browser-side click-to-pay support requires the user's wallet to be registered as a protocol handler.",
+    "example": "b3chain:tb3qexampledemoaddressreplaceme0000000000?amount=0.01&label=B3Chain+testnet+demo&message=Pay+the+demo"
+  },
+  "wallet_integration_notes": {
+    "sparrow": {
+      "supported": false,
+      "_comment": "Sparrow does not yet support custom networks. Workaround: run b3chaind with -chain=test and use the reference CLI for wallet operations. We will revisit this once Sparrow exposes a custom-network plugin API.",
+      "manual_steps": [
+        "Run b3chaind -chain=test in the background",
+        "Use 'b3chain-cli -chain=test getnewaddress \"\" bech32' to create receiving addresses",
+        "Use 'b3chain-cli -chain=test getbalance' / 'sendtoaddress' for spends"
+      ]
+    },
+    "specter": {
+      "supported": false,
+      "_comment": "Specter Desktop supports custom Bitcoin-compatible nodes via JSON-RPC. Point it at b3chaind on port 18534 with the rpcuser/rpcpassword from b3chain.conf. Network metadata above must be added manually to Specter's chain-config."
+    },
+    "electrum": {
+      "supported": false,
+      "_comment": "Electrum desktop client expects an Electrum-server protocol endpoint. Once electrum.b3chain.org is live, point Electrum at it via Tools -> Network -> Server."
+    },
+    "btcpay_server": {
+      "supported": false,
+      "_comment": "BTCPay Server can be configured to support custom altcoins; this is documented in the BTCPay altcoin guide. Not in launch scope."
+    }
+  },
+  "see_also": {
+    "spec":    "https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md",
+    "testnet": "https://b3chain.org/testnet.html",
+    "runbook": "https://github.com/b3chain/b3chain/blob/b3chain-main/doc/testnet-runbook.md"
+  }
+}
