@@ -95,7 +95,7 @@
     free test coins from the faucet, mine blocks with the reference
     CPU miner or the public Stratum pool, and watch the chain in the
     explorer. Test B3C has <b>no monetary value</b>; this network
-    exists to soak-test the consensus rules and B3PoW-Scratch v1.1 PoW
+    exists to soak-test the consensus rules and B3PoW-Scratch v1.1.1 PoW
     pipeline before mainnet launch.
   </p>
   <div class="tagrow">
@@ -263,10 +263,21 @@
 <section id="mine">
   <h2>4. Mine blocks <a class="anchor" href="#mine">#</a></h2>
   <p>
-    Three options, in increasing order of hashrate:
+    Three options, in increasing order of hashrate. All three target the
+    same algorithm: <b>B3PoW-Scratch v1.1.1</b> (post-F-1, live since
+    genesis). The retired <code>BLAKE3(BLAKE3(header))</code> algorithm
+    is <em>not</em> accepted on any b3chain network &mdash; the pool and
+    every full node reject those shares.
   </p>
 
   <h3>Solo mining with the reference CPU miner</h3>
+  <p class="small">
+    <code>b3chain-cpuminer.py</code> defaults to B3PoW-Scratch v1.1.1.
+    The <code>--legacy-blake3d</code> flag exists only for
+    cross-checking historical headers against the retired double-BLAKE3
+    algorithm and will not produce valid B3Chain shares &mdash; the
+    miner emits a stderr warning when that flag is passed.
+  </p>
   <p>
     Anyone can mine on testnet. The reference CPU miner talks to your
     local node via JSON-RPC and submits valid blocks via
@@ -294,7 +305,7 @@ python3 contrib/miner/b3chain-cpuminer.py \
   <p>
     The public pool at
     <code>stratum+tcp://pool.b3chain.org:3333</code> validates every
-    share against the canonical B3PoW-Scratch v1.1 algorithm exactly
+    share against the canonical B3PoW-Scratch v1.1.1 algorithm exactly
     the way <code>b3chaind</code> does. Reward scheme is PPLNS over
     the last 4032 weighted shares; pool fee is 1%. Usernames are
     <code>&lt;email&gt;.&lt;workerName&gt;</code> for verified accounts
@@ -322,6 +333,27 @@ python3 contrib/miner/b3chain-cpuminer.py \
     <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-firmware/README.md">contrib/miner/b3miner-firmware/README.md</a>.
     Point the card at the same Stratum endpoint above; the
     onboard dashboard handles the credentials.
+  </p>
+  <p class="small">
+    After bitstream configuration the firmware reads
+    <code>REG_ID</code> over SPI; it must return <code>0xB3110002</code>
+    (v1.1.1 build 0002 &mdash; the F-1 fix bumped this from the
+    original <code>0xB3110001</code> build 0001). Older bitstreams mine
+    the pre-F-1 v1.1.0 algorithm and are rejected by the v1.1.1
+    firmware.
+  </p>
+
+  <h3>What about a GPU miner?</h3>
+  <p>
+    There isn't one, and there isn't going to be one on this tree.
+    B3PoW-Scratch is <b>GPU-hostile by design</b>: its 1&nbsp;MiB
+    sequential, data-dependent scratchpad destroys GPU throughput. The
+    historical CUDA tree at
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3chain-gpuminer/README.md"><code>contrib/miner/b3chain-gpuminer/</code></a>
+    is <b>deprecated</b>: it still compiles, but it only computes the
+    retired double-BLAKE3 algorithm and is kept only as a worked
+    example of the Stratum V1 + JSONL pipeline. It will not produce
+    valid mainnet or testnet shares.
   </p>
 </section>
 
@@ -355,8 +387,25 @@ python3 contrib/miner/b3chain-cpuminer.py \
           <td>Python exporter feeding <code>/testnet-status.json</code> (this page)</td></tr>
       <tr><td><code>contrib/testnet/monitor/</code></td>
           <td>Cron-driven seed status snapshot &rArr; <code>/testnet-status.txt</code></td></tr>
+      <tr><td><code>contrib/monitoring/51attack-watch.py</code></td>
+          <td>Long-running 51%-attack detection daemon (JSONL + webhook alerts). See <a href="/testing/operator-tools.html">operator tools</a>.</td></tr>
     </tbody>
   </table>
+
+  <h3>Chain-recovery tools (M-14)</h3>
+  <p>
+    Every seed runs the v1.1.3 M-14 operator-pinned chain-recovery
+    RPCs (<code>finalizeblock</code>, <code>unfinalizeblock</code>,
+    <code>parkblock</code>, <code>unparkblock</code>,
+    <code>getfinalizedblockhash</code>) and, in production, the
+    <code>51attack-watch.py</code> monitoring daemon described in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/51-MONITORING-OPS.md">doc/security/51-MONITORING-OPS.md</a>.
+    The end-to-end response procedure for a deep reorg, hashrate
+    drop, or pow-budget storm is in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/RESPONSE-RUNBOOK-51ATTACK.md">RESPONSE-RUNBOOK-51ATTACK.md</a>;
+    a one-page summary of both lives at
+    <a href="/testing/operator-tools.html">testing/operator-tools.html</a>.
+  </p>
 </section>
 
 <!-- ================================================================ -->

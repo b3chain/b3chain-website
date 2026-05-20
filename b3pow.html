@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>b3chain &mdash; B3PoW-Scratch v1.1</title>
+  <title>b3chain &mdash; B3PoW-Scratch v1.1.1</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/css/style.css" />
   <style>
@@ -36,6 +36,14 @@
       font-size: 14px;
     }
     .preliminary b { color: #a60; }
+    .note {
+      border-left: 3px solid #468;
+      background: #f0f4f8;
+      padding: 10px 12px;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    .note b { color: #2a4d6f; }
   </style>
 </head>
 
@@ -43,11 +51,11 @@
 <div class="wrap">
 
 <div class="nav">
-  <a href="index.html">b3chain</a> / B3PoW-Scratch v1.1
+  <a href="index.html">b3chain</a> / B3PoW-Scratch v1.1.1
 </div>
 
 <header>
-  <h1>B3PoW-Scratch v1.1</h1>
+  <h1>B3PoW-Scratch v1.1.1</h1>
   <p class="subtitle">
     The proof-of-work algorithm that runs B3Chain. Memory-hard, BLAKE3-based,
     designed to be FPGA-economical and GPU-hostile &mdash; not ASIC-proof.
@@ -64,6 +72,19 @@
     Spec: <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">contrib/miner/b3miner-rtl/SPEC.md</a>
     &middot; Whitepaper: <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/whitepaper/B3POW-SCRATCH-WHITEPAPER.md">doc/whitepaper/B3POW-SCRATCH-WHITEPAPER.md</a>
   </p>
+
+  <div class="note">
+    <b>Version &amp; activation.</b> The current consensus version is
+    <b>B3PoW-Scratch v1.1.1</b> (<code>SPEC_VERSION = 0x00010101</code>;
+    FPGA <code>REG_ID</code> magic <code>0xB3110002</code>). The F-1
+    fix made <code>ITER_MUL[7]</code> pairwise distinct from
+    <code>ITER_MUL[1]</code> &mdash; closing a lane-degeneracy
+    weakness flagged in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/B3POW-51-ATTACK-ANALYSIS.md">B3POW-51-ATTACK-ANALYSIS.md</a>.
+    v1.1.1 has been live from <b>genesis on every b3chain network</b>
+    (mainnet, testnet, testnet4, regtest); there is no pre-F-1 chain
+    history to migrate.
+  </div>
 </header>
 
 <main class="split">

@@ -20,7 +20,7 @@
 </div>
 
 <header>
-  <h1>B3PoW-Scratch v1.1 vs SHA-256d &mdash; PoW-level comparison</h1>
+  <h1>B3PoW-Scratch v1.1.1 vs SHA-256d &mdash; PoW-level comparison</h1>
   <p class="subtitle">
     Companion to the BLAKE3-primitive throughput pages. This one zooms
     out from "how fast is the inner hash" to "what does an ASIC have
@@ -39,7 +39,7 @@
   <h2>1. Side-by-side</h2>
   <table>
     <thead>
-      <tr><th>Property</th><th>SHA-256d (Bitcoin)</th><th>B3PoW-Scratch v1.1 (B3Chain)</th></tr>
+      <tr><th>Property</th><th>SHA-256d (Bitcoin)</th><th>B3PoW-Scratch v1.1.1 (B3Chain)</th></tr>
     </thead>
     <tbody>
       <tr>
@@ -55,7 +55,7 @@
       <tr>
         <td>Lanes</td>
         <td>1</td>
-        <td>8 (4-way mixed)</td>
+        <td>8 lanes &times; 128&nbsp;KiB; cross-lane diffusion via <code>LANE_SHUFFLE</code> permutation L' = (5L+1) mod 8 = <code>[1,6,3,0,5,2,7,4]</code></td>
       </tr>
       <tr>
         <td>Inner rounds per nonce</td>

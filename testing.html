@@ -32,9 +32,11 @@
   </div>
 
   <div class="warn">
-    <b>This page does not represent a live network.</b>
-    Every script runs on a local regtest environment. There is no mainnet,
-    no token, no airdrop. Parameters may change before any consensus freeze.
+    <b>Scope:</b> Every script linked from this page runs on a local
+    <b>regtest</b> environment so anyone can reproduce the results from
+    a fresh checkout. Mainnet has not launched; the b3chain
+    <a href="testnet.html">testnet</a> is live for soak-testing only.
+    No token, no airdrop. Parameters may change before any consensus freeze.
   </div>
 </header>
 
@@ -55,7 +57,7 @@
     <a class="card" href="testing/pow-verifier.html">
       <h3>B3PoW-Scratch reference verifier</h3>
       <div class="desc">
-        Standalone Python script: replays the B3PoW-Scratch v1.1
+        Standalone Python script: replays the B3PoW-Scratch v1.1.1
         consensus vectors through the Python reference implementation
         and (optionally) verifies live blocks from a running node.
       </div>
@@ -162,7 +164,7 @@
       <h3>H-1 &mdash; PoW / Block-ID isolation</h3>
       <div class="desc">
         Every PoW check uses <code>GetPoWHash</code>
-        (<strong>B3PoW-Scratch v1.1</strong>); block IDs use
+        (<strong>B3PoW-Scratch v1.1.1</strong>); block IDs use
         <code>GetHash</code> (SHA-256d). Sub-checks H-1.1 verifier
         budget, H-1.2 LRU pad cache, H-1.3 HEADERS verification cap.
       </div>
@@ -201,7 +203,7 @@
       <div class="desc">
         SIMD BLAKE3 byte-identical to portable C reference across edge
         sizes and 1000-input fuzz. BLAKE3 is the inner round function
-        of B3PoW-Scratch v1.1, so primitive determinism is a
+        of B3PoW-Scratch v1.1.1, so primitive determinism is a
         prerequisite for chain consensus.
       </div>
       <div class="meta">
@@ -334,13 +336,30 @@
     <a class="card" href="testing/roadmap.html">
       <h3>Security roadmap</h3>
       <div class="desc">
-        Eight prioritised improvements: OSS-Fuzz, reproducible Guix builds,
-        bench CI, external audit, bug bounty, PQC experiment, checkpoint
-        ceremony, miner attestation.
+        Ten prioritised improvements: OSS-Fuzz, reproducible Guix
+        builds, bench CI, external audit, bug bounty, PQC experiment,
+        checkpoint ceremony, miner attestation, continuous 51%-attack
+        monitoring (live), and M-14 operator-pinned recovery RPCs
+        (live).
       </div>
       <div class="meta">
         <code>doc/SECURITY-ROADMAP.md</code>
-        <span class="badge badge-skip">PROPOSED</span>
+        <span class="badge badge-skip">4 LIVE / 6 PROPOSED</span>
+      </div>
+    </a>
+
+    <a class="card" href="testing/operator-tools.html">
+      <h3>Operator tools (M-14 + 51attack-watch)</h3>
+      <div class="desc">
+        The chain-recovery and 51%-attack-monitoring stack every
+        b3chain seed operator runs. M-14 operator-pinned recovery
+        RPCs (v1.1.3), the <code>51attack-watch.py</code> monitoring
+        daemon (v1.1.2), the 8-kind alert taxonomy, and the systemd
+        deployment quick-start.
+      </div>
+      <div class="meta">
+        <code>contrib/monitoring/51attack-watch.py</code>
+        <span class="badge badge-pass">LIVE</span>
       </div>
     </a>
   </div>

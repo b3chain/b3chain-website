@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>b3chain &mdash; Operator tools (M-14 + 51attack-watch)</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <a href="/index.html">b3chain</a> /
+  <a href="/testing.html">Testing &amp; Verification</a> /
+  Operator tools
+</div>
+
+<header>
+  <h1>Operator tools &mdash; chain recovery &amp; 51%-attack monitoring</h1>
+  <p class="subtitle">
+    Everything a b3chain seed or full-node operator needs to detect
+    and respond to a 51%-class attack. The M-14 operator-pinned
+    recovery RPCs landed in <b>b3chain v1.1.3</b>; the
+    <code>51attack-watch.py</code> monitoring daemon landed in
+    <b>v1.1.2</b>. Both are live on every operator-run seed and are
+    documented in-tree.
+  </p>
+  <div class="tagrow">
+    <span class="pill">Status: <b><span class="status-pass">live</span></b></span>
+    <span class="pill">RPCs: <b>5 (M-14)</b></span>
+    <span class="pill">Alert kinds: <b>8</b></span>
+    <span class="pill">Deploy: <b>systemd</b></span>
+  </div>
+</header>
+
+<div class="content">
+
+<!-- ================================================================ -->
+<section id="m14">
+  <h2>1. M-14 operator-pinned chain-recovery RPCs <a class="anchor" href="#m14">#</a></h2>
+  <p>
+    Five JSON-RPC methods, all available to any user whose cookie /
+    <code>rpcauth</code> grants RPC access, that let the operator
+    declare a specific block as the canonical tip. The validator then
+    refuses to reorg past that block &mdash; even if a competing fork
+    accumulates more proof-of-work. Persistence behaviour, bypass
+    paths, and the full response procedure for a sustained attack are
+    in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/RESPONSE-RUNBOOK-51ATTACK.md">RESPONSE-RUNBOOK-51ATTACK.md</a>.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>RPC</th><th>Signature</th><th>Effect</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>finalizeblock</code></td>
+        <td><code>finalizeblock "blockhash"</code></td>
+        <td>Pin <code>blockhash</code> as the canonical tip. Reorgs
+            that would unwind past this block are rejected at
+            <code>AcceptBlock</code>. Persists to
+            <code>blocks/finalize.dat</code>.</td>
+      </tr>
+      <tr>
+        <td><code>unfinalizeblock</code></td>
+        <td><code>unfinalizeblock "blockhash"</code></td>
+        <td>Clear the operator pin for <code>blockhash</code>. Removes
+            the persisted record. Emits a
+            <code>finalized_drift_unfinalized</code> alert from the
+            watcher daemon when observed.</td>
+      </tr>
+      <tr>
+        <td><code>parkblock</code></td>
+        <td><code>parkblock "blockhash"</code></td>
+        <td>Mark a block (and its descendants) as invalid for chain
+            selection. Useful while diagnosing a suspicious fork
+            without committing to <code>finalizeblock</code>.</td>
+      </tr>
+      <tr>
+        <td><code>unparkblock</code></td>
+        <td><code>unparkblock "blockhash"</code></td>
+        <td>Clear a previous <code>parkblock</code> call.</td>
+      </tr>
+      <tr>
+        <td><code>getfinalizedblockhash</code></td>
+        <td><code>getfinalizedblockhash</code></td>
+        <td>Returns the currently-pinned finalized block hash, or
+            <code>null</code> if none. Read-only; what the
+            <code>51attack-watch.py</code> daemon polls every 30
+            seconds to compute the <code>finalized_drift_*</code>
+            alerts.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Implementation pointers</h3>
+  <ul>
+    <li>RPC wiring:
+        <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/rpc/blockchain.cpp"><code>src/rpc/blockchain.cpp</code></a>
+        (search for <code>finalizeblock</code>).</li>
+    <li>Consensus enforcement:
+        <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/validation.cpp"><code>src/validation.cpp</code></a>
+        &mdash; the chain-selection guard and the
+        <code>AcceptBlock</code> rejection live here.</li>
+    <li>On-disk persistence:
+        <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/node/blockstorage.cpp"><code>src/node/blockstorage.cpp</code></a>
+        &mdash; <code>finalize.dat</code> read/write.</li>
+  </ul>
+
+  <h3>Bypass paths (operator must know)</h3>
+  <ul>
+    <li><b>Datadir tamper:</b> Deleting
+        <code>blocks/finalize.dat</code> and restarting clears the
+        operator pin. This is by design &mdash; the operator must
+        retain control of the datadir.</li>
+    <li><b>Manual <code>unfinalizeblock</code>:</b> A compromised RPC
+        credential could clear the pin. The watcher daemon emits
+        <code>finalized_drift_unfinalized</code> when this happens so
+        the operator gets alerted immediately.</li>
+    <li><b>Out-of-band consensus:</b> Other operators on other seeds
+        must also pin the same hash, or the network can fork along
+        operator boundaries. The runbook §4 covers coordination.</li>
+  </ul>
+</section>
+
+<!-- ================================================================ -->
+<section id="watch">
+  <h2>2. <code>51attack-watch.py</code> monitoring daemon <a class="anchor" href="#watch">#</a></h2>
+  <p>
+    A long-running Python daemon that polls
+    <code>b3chaind</code>'s JSON-RPC interface and tails its
+    <code>debug.log</code>. It emits structured JSONL alerts to stdout
+    (and, optionally, to a webhook) when any of eight distinct attack
+    signatures fire. The unit ships as
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/monitoring/51attack-watch.py"><code>contrib/monitoring/51attack-watch.py</code></a>;
+    full operator notes are in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/51-MONITORING-OPS.md"><code>doc/security/51-MONITORING-OPS.md</code></a>.
+  </p>
+
+  <h3>What it polls (RPC)</h3>
+  <ul>
+    <li><code>getblockcount</code>, <code>getbestblockhash</code> &mdash;
+        chain-tip tracking and reorg-depth measurement.</li>
+    <li><code>getblockheader</code> &mdash; common-ancestor lookup
+        for <code>near_reorg_cap</code> and <code>long_reorg</code>
+        depth calculations.</li>
+    <li><code>getnetworkhashps</code> &mdash; rolling hashrate sample
+        used by the <code>hashrate_sustained_drop</code> detector.</li>
+    <li><code>getfinalizedblockhash</code> (M-14, v1.1.3) &mdash;
+        operator-pin parity tracking; produces the three
+        <code>finalized_drift_*</code> alerts.</li>
+  </ul>
+
+  <h3>What it tails (debug.log)</h3>
+  <ul>
+    <li><code>InvalidChainFound</code> / "deep reorg attempt" log
+        lines &mdash; produces <code>deep_reorg_log</code> alerts.</li>
+    <li><code>B3PoW: budget exceeded</code> log lines &mdash; produces
+        <code>pow_budget_storm</code> alerts when the
+        rate-over-window crosses
+        <code>--pow-budget-rate / --pow-budget-window</code>.</li>
+  </ul>
+
+  <p>
+    The log tailer (<code>_LogTailer</code> in the script) is
+    inode-aware: it survives <code>logrotate</code>, file rename, and
+    file truncation without missing lines or double-counting them.
+  </p>
+</section>
+
+<!-- ================================================================ -->
+<section id="taxonomy">
+  <h2>3. Alert taxonomy &mdash; 8 kinds <a class="anchor" href="#taxonomy">#</a></h2>
+  <p>
+    Each alert kind maps to a specific row in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/RESPONSE-RUNBOOK-51ATTACK.md">RESPONSE-RUNBOOK-51ATTACK.md §0</a>;
+    every alert payload includes the alert <code>kind</code>,
+    <code>severity</code>, the runbook's <code>recommended_action</code>
+    field, and a structured <code>extra</code> object with the raw
+    measurements that triggered it.
+  </p>
+
+  <ul>
+    <li>
+      <b><code>near_reorg_cap</code></b> &mdash; a competing fork has
+      grown deep enough to be within one block of the
+      <code>MAX_REORG_DEPTH</code> consensus cap. Runbook: investigate
+      the alternate tip; consider <code>parkblock</code>.
+    </li>
+    <li>
+      <b><code>long_reorg</code></b> &mdash; an actual reorg of depth
+      &ge; <code>--long-reorg-depth</code> (default 50) just occurred.
+      Runbook: confirm chain identity, then <code>finalizeblock</code>
+      the operator-canonical tip.
+    </li>
+    <li>
+      <b><code>deep_reorg_log</code></b> &mdash; <code>b3chaind</code>
+      logged a "deep reorg attempt" event (a competing chain tried to
+      reorg deeper than the safety cap; the node rejected it).
+      Runbook: cross-check the seeds; coordinate with other operators
+      before acting.
+    </li>
+    <li>
+      <b><code>pow_budget_storm</code></b> &mdash; the <i>verifier
+      wall-clock budget</i> (the 50&nbsp;ms B3PoW-Scratch ceiling) has
+      been exceeded at &ge; <code>--pow-budget-rate</code> events per
+      <code>--pow-budget-window</code> seconds. This is the
+      DoS-resistance backstop; sustained storms can indicate a
+      malformed header attack. Runbook: confirm node health, then
+      check peers.
+    </li>
+    <li>
+      <b><code>hashrate_sustained_drop</code></b> &mdash; the rolling
+      <code>networkhashps</code> sample has dropped by
+      &ge; <code>--hashrate-sustained-drop</code> (default 70%) for at
+      least <code>--hashrate-sustained-window</code> seconds (default
+      one hour). Runbook: check pool / FPGA telemetry; this is the
+      "miners are leaving" signal.
+    </li>
+    <li>
+      <b><code>finalized_drift_persistent</code></b> &mdash; the
+      operator-pinned hash from <code>getfinalizedblockhash</code> has
+      not moved forward for &gt; 24h while the chain tip has. Usually
+      benign (the operator hasn't repinned); flagged for
+      auditability.
+    </li>
+    <li>
+      <b><code>finalized_drift_resolved</code></b> &mdash; the
+      finalized pin has caught up to (or past) the canonical tip.
+      Informational; closes a previous
+      <code>finalized_drift_persistent</code> alert.
+    </li>
+    <li>
+      <b><code>finalized_drift_unfinalized</code></b> &mdash; an
+      operator-pinned block was cleared via
+      <code>unfinalizeblock</code>. Critical &mdash; this is the alert
+      that fires when the operator pin disappears unexpectedly
+      (compromised credential, manual misuse, datadir tamper).
+    </li>
+  </ul>
+</section>
+
+<!-- ================================================================ -->
+<section id="runbook">
+  <h2>4. Response runbook (§0 detection triggers) <a class="anchor" href="#runbook">#</a></h2>
+  <p>
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/RESPONSE-RUNBOOK-51ATTACK.md">RESPONSE-RUNBOOK-51ATTACK.md</a>
+    is the single source of truth for what to do when an alert fires.
+    Its §0 table maps every alert kind to one of three recommended
+    actions: <i>investigate</i> (look at logs / peers; no consensus
+    action yet), <i>park</i> (mark a suspect tip non-canonical without
+    committing), and <i>finalize</i> (pin the operator-canonical tip;
+    this is the chain-recovery action). §1&ndash;§5 cover the
+    coordination protocol with the other seed operators, when to
+    escalate to public disclosure, and how to unwind a
+    <code>finalizeblock</code> safely once the attack subsides.
+  </p>
+</section>
+
+<!-- ================================================================ -->
+<section id="analysis">
+  <h2>5. Attack analysis &amp; threat model <a class="anchor" href="#analysis">#</a></h2>
+  <p>
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/B3POW-51-ATTACK-ANALYSIS.md">B3POW-51-ATTACK-ANALYSIS.md</a>
+    is the long-form analysis. §1&ndash;§3 model what actually
+    happens at &alpha; &ge; 50% hashrate share &mdash; the expected
+    fork-resolution time, the cost-of-attack curve, and why the M-14
+    operator-pin is the correct chain-recovery primitive instead of a
+    DAA tweak. §4.4 compares B3Chain's posture to the ETC and ETH
+    Classic 51% events (2019&ndash;2020), to BSV
+    (Aug&nbsp;2021), and to Bitcoin Gold (May&nbsp;2018,
+    Jan&nbsp;2020) &mdash; each of those chains lost
+    millions to double-spends because they had no operator-pin
+    primitive and no real-time monitoring; the document explains how
+    B3Chain's M-14 + watch-daemon stack closes that gap.
+  </p>
+</section>
+
+<!-- ================================================================ -->
+<section id="quickstart">
+  <h2>6. Operator quick-start (systemd) <a class="anchor" href="#quickstart">#</a></h2>
+  <p>
+    Drop the daemon under <code>/opt/b3chain/contrib/monitoring/</code>
+    (it ships in the b3chain tree at
+    <a href="https://github.com/b3chain/b3chain/tree/b3chain-main/contrib/monitoring"><code>contrib/monitoring/</code></a>),
+    write the unit file below to
+    <code>/etc/systemd/system/b3chain-51watch.service</code>, and
+    <code>systemctl enable --now b3chain-51watch.service</code>. Full
+    deployment notes, hardening rationale, and PagerDuty / Slack
+    webhook details are in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/51-MONITORING-OPS.md"><code>doc/security/51-MONITORING-OPS.md</code></a>.
+  </p>
+
+<pre>[Unit]
+Description=B3Chain 51%-attack early-warning monitor
+After=network-online.target b3chaind.service
+Wants=network-online.target
+Requires=b3chaind.service
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+Environment=PYTHONUNBUFFERED=1
+Environment=WEBHOOK_URL=https://pagerduty.example.com/services/XXX/integrations/YYY
+ExecStart=/usr/bin/python3 /opt/b3chain/contrib/monitoring/51attack-watch.py \
+    --rpc-port 8532 \
+    --datadir /var/lib/b3chain/.b3chain \
+    --chain main \
+    --interval 30 \
+    --dedup-window 300 \
+    --long-reorg-depth 50 \
+    --pow-budget-rate 100 \
+    --pow-budget-window 3600 \
+    --hashrate-sustained-drop 0.70 \
+    --hashrate-sustained-window 3600
+StandardOutput=append:/var/log/b3chain/51watch.jsonl
+StandardError=journal
+Restart=on-failure
+RestartSec=15s
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/log/b3chain
+ReadOnlyPaths=/var/lib/b3chain/.b3chain
+
+[Install]
+WantedBy=multi-user.target</pre>
+
+  <p>
+    The webhook URL can be any HTTPS endpoint that accepts
+    <code>application/json</code>; alerts are POSTed verbatim. The
+    daemon will not exit on webhook failure &mdash; it logs the
+    failure to stderr (journald) and keeps running. PagerDuty Events
+    API v2, Slack incoming webhooks, and Loki / ElasticSearch / custom
+    JSON sinks are all directly compatible.
+  </p>
+
+  <h3>Smoke test</h3>
+  <p>
+    The audit suite at
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/smoke-51attack-watch-e2e.py"><code>contrib/testing/audit/smoke-51attack-watch-e2e.py</code></a>
+    runs an end-to-end smoke test against a mock RPC and mock
+    <code>debug.log</code>, exercising all 8 alert kinds. Run it
+    before deploying any monitoring-config change:
+  </p>
+
+<pre>python3 contrib/testing/audit/smoke-51attack-watch-e2e.py</pre>
+</section>
+
+<!-- ================================================================ -->
+<section id="links">
+  <h2>7. Source &amp; reference links <a class="anchor" href="#links">#</a></h2>
+  <ul>
+    <li>Monitoring daemon:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/monitoring/51attack-watch.py">contrib/monitoring/51attack-watch.py</a></li>
+    <li>Operator runbook:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/RESPONSE-RUNBOOK-51ATTACK.md">doc/security/RESPONSE-RUNBOOK-51ATTACK.md</a></li>
+    <li>Monitoring-ops guide:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/51-MONITORING-OPS.md">doc/security/51-MONITORING-OPS.md</a></li>
+    <li>Threat-model analysis:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/B3POW-51-ATTACK-ANALYSIS.md">doc/security/B3POW-51-ATTACK-ANALYSIS.md</a></li>
+    <li>M-14 RPC wiring:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/rpc/blockchain.cpp">src/rpc/blockchain.cpp</a></li>
+    <li>M-14 consensus enforcement:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/validation.cpp">src/validation.cpp</a></li>
+    <li>M-14 on-disk persistence:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/node/blockstorage.cpp">src/node/blockstorage.cpp</a></li>
+    <li>End-to-end smoke test:
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/testing/audit/smoke-51attack-watch-e2e.py">contrib/testing/audit/smoke-51attack-watch-e2e.py</a></li>
+  </ul>
+</section>
+
+</div><!-- /content -->
+
+<div class="page-nav">
+  <a class="prev" href="/testing/51-attack.html">51% attack walkthrough</a>
+  <a class="next" href="/testing.html">Back to testing hub</a>
+</div>
+
+</div>
+
+<footer>
+  <p>&copy; <span id="y"></span> b3chain. For information only.</p>
+</footer>
+
+</div>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

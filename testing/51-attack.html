@@ -214,7 +214,7 @@ AUDIT RESULT: PASS  [A-1]</pre>
 <section id="defences">
   <h2>5. How b3chain helps <a class="anchor" href="#defences">#</a></h2>
   <ul>
-    <li><b>B3PoW-Scratch v1.1 (memory-hard PoW).</b> Bitcoin's
+    <li><b>B3PoW-Scratch v1.1.1 (memory-hard PoW).</b> Bitcoin's
         SHA-256 ASIC industry has produced very concentrated hashrate.
         B3PoW-Scratch spends most of its time in a 1&nbsp;MB
         per-header scratchpad walk, so on-die SRAM bandwidth dominates
@@ -314,7 +314,7 @@ AUDIT RESULT: PASS  [A-1]</pre>
 <h3>What protects B3Chain</h3>
 <p>Three layers, in increasing order of importance:</p>
 <ol>
-  <li><strong>B3PoW-Scratch v1.1 is memory-hard, reducing ASIC concentration risk in early days.</strong> The</li>
+  <li><strong>B3PoW-Scratch v1.1.1 is memory-hard, reducing ASIC concentration risk in early days.</strong> The</li>
 </ol>
 <p>   PoW spends most of its time in a 1 MB per-header scratchpad walk (see <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">SPEC.md</a>), so on-die SRAM/L1 buying power dominates the hashrate-per-watt curve rather than raw arithmetic throughput. That makes B3PoW-Scratch ASICs <em>possible</em> but expensive and slow to profitably outpace commodity CPUs and GPUs &mdash; much harder than building a stock SHA-256 ASIC. Bitcoin's SHA-256 ASIC market is concentrated in 5 companies; those companies could (in principle) repurpose hardware to attack a SHA-256 fork from day one. B3PoW doesn't have that problem yet.</p>
 <ol>
@@ -322,9 +322,61 @@ AUDIT RESULT: PASS  [A-1]</pre>
 </ol>
 <p>   require more confirmations for high-value B3Chain transactions in    year one, until total hashrate grows enough that the cost-of-attack    is high.</p>
 <ol>
-  <li><strong>Checkpoint key ceremony</strong> (planned, see</li>
+  <li><strong>Operator-pinned chain recovery (M-14, live since
+      b3chain v1.1.3).</strong> If a sustained attack does appear, every
+      seed and full node ships with the five M-14 recovery RPCs
+      &mdash; <code>finalizeblock</code>,
+      <code>unfinalizeblock</code>, <code>parkblock</code>,
+      <code>unparkblock</code>, <code>getfinalizedblockhash</code>
+      &mdash; that let the operator pin the canonical tip and reject
+      any deeper reorg from a competing fork. The full procedure (when
+      to invoke, who to coordinate with, persistence behaviour, bypass
+      paths) is in
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/RESPONSE-RUNBOOK-51ATTACK.md">RESPONSE-RUNBOOK-51ATTACK.md</a>;
+      a one-page summary lives at
+      <a href="/testing/operator-tools.html">testing/operator-tools.html</a>.
+      It is centralising in a way, but the recovery option exists if a
+      sustained attack appears, and it is shipped &mdash; not
+      "planned".</li>
 </ol>
-<p>   <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/SECURITY-ROADMAP.md"><code>SECURITY-ROADMAP.md</code></a>). Trusted    maintainers sign post-launch checkpoint hashes; nodes can opt in to    refuse reorgs deeper than the most recent checkpoint. Centralising    in a way, but the recovery option exists if a sustained attack    appears.</p>
+
+<div class="hr"></div>
+
+<h3>Detection &amp; recovery (live tooling)</h3>
+<p>
+  The chain's defence against a 51% adversary is not just the
+  cost-of-attack curve above &mdash; it is also the
+  <em>detect &rarr; alert &rarr; recover</em> pipeline that the seed
+  operators run in production. All three layers shipped in b3chain
+  v1.1.2 / v1.1.3 and are live on every operator-run node:
+</p>
+<ul>
+  <li><strong>M-14 operator-pinned recovery RPCs</strong> (v1.1.3) —
+      five RPCs that let the operator finalize, park, and pin tips so
+      that any reorg deeper than the finalized block is rejected.
+      Detailed in <a href="/testing/operator-tools.html#m14">operator
+      tools §1</a> and
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/RESPONSE-RUNBOOK-51ATTACK.md">RESPONSE-RUNBOOK-51ATTACK.md</a>.</li>
+  <li><strong><code>51attack-watch.py</code> monitoring daemon</strong>
+      (v1.1.2) — long-running Python daemon polling
+      <code>b3chaind</code> RPC and tailing
+      <code>debug.log</code>, emitting JSONL alerts plus optional
+      webhook posts. Eight distinct alert kinds (near_reorg_cap,
+      long_reorg, deep_reorg_log, pow_budget_storm,
+      hashrate_sustained_drop, and three finalized_drift_* variants).
+      See <a href="/testing/operator-tools.html#watch">operator tools
+      §2</a>.</li>
+  <li><strong>Runbook §0 detection triggers</strong> &mdash; every
+      alert kind has a matching response action mapped to specific
+      operator commands in
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/RESPONSE-RUNBOOK-51ATTACK.md">RESPONSE-RUNBOOK-51ATTACK.md</a>.
+      The end-to-end threat model and peer-chain comparison live in
+      <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/B3POW-51-ATTACK-ANALYSIS.md">B3POW-51-ATTACK-ANALYSIS.md</a>.</li>
+  <li><strong>Operator quick-start</strong> &mdash; systemd unit,
+      webhook config, and a 5-minute deployment guide are on the
+      <a href="/testing/operator-tools.html">operator tools page</a>.</li>
+</ul>
+
 <h3>What does NOT protect against 51%</h3>
 <ul>
   <li>"Just keep upgrading the difficulty algorithm" — doesn't help; the</li>

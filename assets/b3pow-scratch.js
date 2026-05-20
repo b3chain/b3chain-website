@@ -1,5 +1,5 @@
 /* =========================================================================
- * b3pow-scratch.js -- B3PoW-Scratch v1.1 (demo browser port)
+ * b3pow-scratch.js -- B3PoW-Scratch v1.1.1 (demo browser port)
  *
  *   Ports b3chain/contrib/miner/b3miner-rtl/ref/b3pow_ref.py to vanilla
  *   ES2020+ browser JS for the public demo at /demo.html. Identical
@@ -267,7 +267,7 @@
     return { newCv: newCv, permutedMsg: m };
   }
 
-  /* === Top-level B3PoW-Scratch v1.1 (SPEC §5) ============================ */
+  /* === Top-level B3PoW-Scratch v1.1.1 (SPEC §5) ============================ */
 
   /* SPEC §6.1: pad[i*64..(i+1)*64] = BLAKE3-XOF(prev_block_hash || u32_le(i), 64). */
   function initScratchpad(prevBlockHashLE) {

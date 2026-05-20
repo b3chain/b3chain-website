@@ -10,17 +10,31 @@ Static site for **b3chain**. Deploys to GitHub, IPFS, and ENS.
 
 ```
 b3chain-website/
-├── index.html       # Main placeholder page
-├── favicon.svg      # Icon (SVG, IPFS-friendly)
-├── favicon.ico      # Optional (add if needed)
+├── index.html       # Landing page (project intro + status)
+├── b3pow.html       # B3PoW-Scratch v1.1.1 algorithm landing
+├── testnet.html     # Public testnet operator guide
+├── testing.html     # Reproducible-test + verification hub
+├── demo.html        # Interactive in-browser PoW demos
+├── testing/         # Per-audit, per-vector, per-comparison pages
+│   ├── pow-verifier.html
+│   ├── test-vectors.html
+│   ├── operator-tools.html  # M-14 RPCs + 51attack-watch monitoring
+│   ├── 51-attack.html
+│   ├── security-audit.html
+│   ├── roadmap.html
+│   └── compare/...
+├── assets/
+│   ├── b3pow-scratch.js    # In-browser B3PoW-Scratch v1.1.1 port
+│   ├── b3pow-demo.js       # Demo UI + Web Worker driver
+│   └── charts/             # Benchmark charts (SVG)
 ├── css/
-│   └── style.css    # Styles
-├── docs/
-│   └── README.md    # Future documentation
-└── README.md        # This file
+│   └── style.css
+├── favicon.svg
+└── README.md
 ```
 
-Static HTML/CSS plus one small script for the footer year. Fine to pin on IPFS.
+Static HTML/CSS plus a couple of small scripts (footer year, in-browser
+PoW demo). Fine to pin on IPFS.
 
 ## Quick deploy
 
@@ -29,7 +43,7 @@ Static HTML/CSS plus one small script for the footer year. Fine to pin on IPFS.
 ```bash
 git init
 git add .
-git commit -m "Initial B3 Chain placeholder page"
+git commit -m "Update b3chain-website"
 git branch -M main
 git remote add origin https://github.com/b3chain/b3chain-website.git
 git push -u origin main

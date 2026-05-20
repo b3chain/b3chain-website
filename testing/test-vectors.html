@@ -24,7 +24,7 @@
     Canonical <code>(header, prev_block_hash)</code> &rarr;
     <code>pow_hash</code> pairs that pin the C++ port to the Python
     reference. Use these to validate any independent
-    B3PoW-Scratch&nbsp;v1.1 implementation &mdash; alternative client,
+    B3PoW-Scratch&nbsp;v1.1.1 implementation &mdash; alternative client,
     hardware miner, or FPGA / RTL port.
   </p>
 </header>
@@ -34,14 +34,17 @@
 <section>
   <h2>1. Algorithm under test</h2>
   <div class="kvs">
-    <div>Algorithm</div><div><b>B3PoW-Scratch v1.1</b></div>
+    <div>Algorithm</div><div><b>B3PoW-Scratch v1.1.1</b> (post-F-1, live since genesis)</div>
     <div>SPEC_VERSION</div><div><code>0x00010101</code></div>
+    <div>FPGA <code>REG_ID</code> magic</div><div><code>0xB3110002</code> (build 0002)</div>
     <div>Scratchpad size</div><div>1 048 576 bytes (1&nbsp;MiB) per parent</div>
-    <div>Lanes</div><div>8</div>
+    <div>Scratchpad blocks</div><div>16 384 total (8 lanes &times; 2 048 blocks &times; 64-byte block)</div>
+    <div>Lanes</div><div>8 (cross-lane diffusion via <code>LANE_SHUFFLE = [1,6,3,0,5,2,7,4]</code>)</div>
     <div>Outer iterations</div><div>2048</div>
     <div>Inner BLAKE3 rounds / iter</div><div>2</div>
     <div>Inner round function</div><div>BLAKE3</div>
     <div>Verifier wall-clock budget</div><div>50&nbsp;ms (consensus parameter)</div>
+    <div>F-1 fix</div><div><code>ITER_MUL[7] = 0x6E5C6F88AA5BDA77</code> (made pairwise distinct from <code>ITER_MUL[1]</code>; see <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/B3POW-51-ATTACK-ANALYSIS.md">B3POW-51-ATTACK-ANALYSIS.md</a>)</div>
     <div>Spec</div><div><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/miner/b3miner-rtl/SPEC.md">contrib/miner/b3miner-rtl/SPEC.md</a></div>
   </div>
 </section>

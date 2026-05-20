@@ -22,7 +22,7 @@
   <h1>B3PoW-Scratch Reference Verifier</h1>
   <p class="subtitle">
     A standalone Python script that replays the
-    <b>B3PoW-Scratch&nbsp;v1.1</b> consensus vectors through the byte-for-byte
+    <b>B3PoW-Scratch&nbsp;v1.1.1</b> consensus vectors through the byte-for-byte
     Python reference implementation. Requires no running node and no
     C++ build &mdash; just Python and the official <code>blake3</code>
     binding.
@@ -42,7 +42,7 @@
     Block <i>identity</i> hashes (block hash, txid, merkle tree) on b3chain
     still use double SHA-256, identical to Bitcoin Core. The
     <b>proof-of-work hash</b> is the only consensus-critical hash that
-    differs &mdash; it is <b>B3PoW-Scratch&nbsp;v1.1</b>, a memory-hard
+    differs &mdash; it is <b>B3PoW-Scratch&nbsp;v1.1.1</b>, a memory-hard
     BLAKE3 variant that walks a 1&nbsp;MB scratchpad keyed by the
     previous block hash:
   </p>
@@ -108,7 +108,7 @@ python3 contrib/testing/verify-b3pow.py</pre>
 <section>
   <h2>4. Expected output</h2>
 <pre>============================================================
- B3Chain B3PoW-Scratch v1.1 Verification
+ B3Chain B3PoW-Scratch v1.1.1 Verification
 ============================================================
 
 [1/3] b3pow_ref self-check

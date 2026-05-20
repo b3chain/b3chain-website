@@ -23,9 +23,12 @@
   <p class="subtitle">
     The Phase 11 self-audit checks what we shipped today. The Bitcoin
     inheritance audit checks that we did not break what Bitcoin already
-    proved. This page is the forward-looking counterpart: the eight
+    proved. This page is the forward-looking counterpart: the ten
     things that should happen before, around, or after mainnet launch
-    to keep raising the security bar.
+    to keep raising the security bar. Items 9 (continuous 51%-attack
+    monitoring) and 10 (M-14 operator-pinned chain recovery) have
+    already landed (b3chain v1.1.2 / v1.1.3); items 1 (OSS-Fuzz
+    scaffold) and 3 (continuous benchmark CI) also shipped in v1.1.2.
   </p>
   <div class="tagrow">
     <span class="pill">Source: <b>doc/SECURITY-ROADMAP.md</b></span>
@@ -65,7 +68,7 @@
         <td><a href="#item-1">OSS-Fuzz integration</a></td>
         <td>High</td>
         <td>2&ndash;4 wk</td>
-        <td><span class="badge badge-skip">proposed</span></td>
+        <td><span class="badge badge-pass">scaffold landed (v1.1.2)</span></td>
       </tr>
       <tr>
         <td>2</td>
@@ -79,7 +82,7 @@
         <td><a href="#item-3">Continuous benchmark CI</a></td>
         <td>Medium</td>
         <td>1 wk</td>
-        <td><span class="badge badge-skip">in-progress</span></td>
+        <td><span class="badge badge-pass">live (v1.1.2)</span></td>
       </tr>
       <tr>
         <td>4</td>
@@ -116,6 +119,20 @@
         <td>6&ndash;10 wk</td>
         <td><span class="badge badge-skip">proposed</span></td>
       </tr>
+      <tr>
+        <td>9</td>
+        <td><a href="#item-9">Continuous 51%-attack monitoring</a></td>
+        <td>High</td>
+        <td>2 wk (shipped)</td>
+        <td><span class="badge badge-pass">live (v1.1.2)</span></td>
+      </tr>
+      <tr>
+        <td>10</td>
+        <td><a href="#item-10">M-14 operator-pinned chain recovery</a></td>
+        <td>High</td>
+        <td>3 wk (shipped)</td>
+        <td><span class="badge badge-pass">live (v1.1.3)</span></td>
+      </tr>
     </tbody>
   </table>
 
@@ -128,9 +145,9 @@
 </section>
 
 <section id="item-1">
-  <h2>3. OSS-Fuzz integration <span class="badge badge-skip">proposed</span></h2>
+  <h2>3. OSS-Fuzz integration <span class="badge badge-pass">scaffold landed (v1.1.2)</span></h2>
   <p><strong>Priority:</strong> High &nbsp;
-     <strong>Effort:</strong> 2&ndash;4 person-weeks</p>
+     <strong>Effort:</strong> 2&ndash;4 person-weeks (scaffold shipped; OSS-Fuzz onboarding pending)</p>
   <p>
     Bitcoin Core ships 60+ libFuzzer harnesses under
     <code>src/test/fuzz/</code> &mdash; B3Chain inherits all of them.
@@ -142,6 +159,13 @@
         <code>audit-simd-blake3.py</code> assertion, running 24/7).</li>
     <li>Any new consensus parser code introduced by the PoW swap.</li>
   </ul>
+  <p>
+    <strong>Status (v1.1.2).</strong> The libFuzzer harnesses for the
+    B3Chain-specific paths landed and run locally via the standard
+    Bitcoin Core build flags. What remains is the OSS-Fuzz
+    project-onboarding step (Google's side, plus the
+    <code>project.yaml</code> upstream).
+  </p>
   <p>
     <strong>Why it matters.</strong> OSS-Fuzz runs on Google's
     infrastructure with thousands of CPU-hours. A reachable bug is
@@ -172,21 +196,24 @@
 </section>
 
 <section id="item-3">
-  <h2>5. Continuous benchmark CI <span class="badge badge-skip">in-progress</span></h2>
+  <h2>5. Continuous benchmark CI <span class="badge badge-pass">live (v1.1.2)</span></h2>
   <p><strong>Priority:</strong> Medium &nbsp;
-     <strong>Effort:</strong> 1 person-week (started)</p>
+     <strong>Effort:</strong> 1 person-week (shipped)</p>
   <p>
-    The throughput comparison
-    (<a href="/testing/compare/pow-throughput.html"><code>compare-pow-throughput</code></a>)
-    runs on every PR via
+    The dedicated benchmark workflow at
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/.github/workflows/benchmark.yml">
+    <code>.github/workflows/benchmark.yml</code></a> (v1.1.2) runs on
+    every PR alongside the comparison harness
     <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/.github/workflows/compare-bench.yml">
-    <code>.github/workflows/compare-bench.yml</code></a> and fails if
-    BLAKE3 primitive throughput regresses by more than 10% versus
-    the pinned baseline.
+    <code>compare-bench.yml</code></a> and fails if BLAKE3 primitive
+    throughput regresses by more than 10% versus the pinned baseline.
+    The throughput-comparison page
+    (<a href="/testing/compare/pow-throughput.html"><code>compare-pow-throughput</code></a>)
+    is regenerated from that same workflow's output.
   </p>
   <p>Future work:</p>
   <ul>
-    <li>Wire up block-validation benchmark on a nightly cadence.</li>
+    <li>Wire up the block-validation benchmark on a nightly cadence.</li>
     <li>Result-over-time chart on this site.</li>
     <li>Add a physical power meter to the runner for an energy
         regression curve.</li>
@@ -203,7 +230,7 @@
     Cure53, Quarkslab, Least Authority) for a focused review of:
   </p>
   <ul>
-    <li>B3PoW-Scratch v1.1 integration: every diff that touches
+    <li>B3PoW-Scratch v1.1.1 integration: every diff that touches
         <code>pow.cpp</code>, <code>validation.cpp</code> PoW paths,
         <code>chainparams.cpp</code>, <code>crypto/b3pow_scratch.cpp</code>,
         <code>crypto/b3pow_cache.cpp</code>, <code>crypto/blake3/</code>.</li>
@@ -309,8 +336,61 @@
   </p>
 </section>
 
+<section id="item-9">
+  <h2>11. Continuous 51%-attack monitoring <span class="badge badge-pass">live (v1.1.2)</span></h2>
+  <p><strong>Priority:</strong> High &nbsp;
+     <strong>Effort:</strong> 2 person-weeks (shipped)</p>
+  <p>
+    A long-running Python daemon
+    (<a href="https://github.com/b3chain/b3chain/blob/b3chain-main/contrib/monitoring/51attack-watch.py"><code>contrib/monitoring/51attack-watch.py</code></a>)
+    that polls <code>b3chaind</code> RPC and tails its
+    <code>debug.log</code>, emitting JSONL alerts (and optional
+    webhook POSTs) for eight distinct 51%-attack signatures.
+    Operator-deployment notes are in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/51-MONITORING-OPS.md"><code>doc/security/51-MONITORING-OPS.md</code></a>,
+    and a one-page summary lives at
+    <a href="/testing/operator-tools.html#watch"><code>testing/operator-tools.html#watch</code></a>.
+  </p>
+  <p>
+    <strong>Status (v1.1.2).</strong> Shipped with unit tests and an
+    end-to-end smoke test covering all 8 alert kinds. Running in
+    production on every operator-run seed.
+  </p>
+</section>
+
+<section id="item-10">
+  <h2>12. M-14 operator-pinned chain recovery <span class="badge badge-pass">live (v1.1.3)</span></h2>
+  <p><strong>Priority:</strong> High &nbsp;
+     <strong>Effort:</strong> 3 person-weeks (shipped)</p>
+  <p>
+    Five RPCs (<code>finalizeblock</code>,
+    <code>unfinalizeblock</code>, <code>parkblock</code>,
+    <code>unparkblock</code>, <code>getfinalizedblockhash</code>) that
+    let the operator declare the canonical tip and refuse any deeper
+    reorg from a competing fork. Wired in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/rpc/blockchain.cpp"><code>src/rpc/blockchain.cpp</code></a>,
+    enforced in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/validation.cpp"><code>src/validation.cpp</code></a>,
+    persisted via
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/src/node/blockstorage.cpp"><code>src/node/blockstorage.cpp</code></a>.
+    Detailed in
+    <a href="/testing/operator-tools.html#m14"><code>testing/operator-tools.html#m14</code></a>;
+    response procedure in
+    <a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/security/RESPONSE-RUNBOOK-51ATTACK.md"><code>doc/security/RESPONSE-RUNBOOK-51ATTACK.md</code></a>.
+  </p>
+  <p>
+    <strong>Status (v1.1.3).</strong> Shipped with the A-10 Phase&nbsp;11
+    audit entry and persistence-plus-bypass-path coverage. Item&nbsp;7
+    above (mainnet checkpoint key ceremony) is the multi-party,
+    out-of-protocol counterpart and remains deferred unless and until
+    51% attack probability becomes an operational concern; M-14 is the
+    in-protocol single-operator primitive that does <em>not</em> wait
+    on the ceremony to be useful.
+  </p>
+</section>
+
 <section>
-  <h2>11. How this list evolves</h2>
+  <h2>13. How this list evolves</h2>
   <ol>
     <li>New items are opened as a GitHub issue with the
         <code>roadmap-proposal</code> label, then merged into the source
@@ -325,7 +405,7 @@
 </section>
 
 <section>
-  <h2>12. Source files</h2>
+  <h2>14. Source files</h2>
   <ul>
     <li><a href="https://github.com/b3chain/b3chain/blob/b3chain-main/doc/SECURITY-ROADMAP.md">
         <code>doc/SECURITY-ROADMAP.md</code></a> &mdash; the master roadmap document</li>

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>b3chain &mdash; H-1 PoW / Block-ID Isolation (B3PoW-Scratch v1.1)</title>
+  <title>b3chain &mdash; H-1 PoW / Block-ID Isolation (B3PoW-Scratch v1.1.1)</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
@@ -20,10 +20,10 @@
 </div>
 
 <header>
-  <h1>H-1 &mdash; PoW / Block-ID Hash Isolation (B3PoW-Scratch v1.1)</h1>
+  <h1>H-1 &mdash; PoW / Block-ID Hash Isolation (B3PoW-Scratch v1.1.1)</h1>
   <p class="subtitle">
     b3chain inherits Bitcoin's SHA-256d block-identity hash but replaces
-    the proof-of-work hash with <b>B3PoW-Scratch v1.1</b> &mdash; a
+    the proof-of-work hash with <b>B3PoW-Scratch v1.1.1</b> &mdash; a
     memory-hard BLAKE3 variant with a 1&nbsp;MB scratchpad. The two
     algorithms must never be mixed up, and every PoW check site must
     use the right one.
@@ -72,7 +72,7 @@
         B3PoW port, not bare BLAKE3.</li>
     <li><b>Header API scan.</b> <code>CBlockHeader</code> in
         <code>src/primitives/block.h</code> must declare both
-        <code>GetHash()</code> and the v1.1 4-arg
+        <code>GetHash()</code> and the B3PoW-Scratch 4-arg
         <code>GetPoWHash(prev_block_hash, pad, budget, out_exceeded)</code>.</li>
     <li><b>Functional check.</b> Mine a regtest block and verify:
       <ul>
@@ -193,7 +193,7 @@ python3 contrib/testing/audit/audit-b3pow-headers-cap.py</pre>
 
 <section>
   <h2>8. Expected output</h2>
-<pre>[H-1] PoW / Block-ID isolation (B3PoW-Scratch v1.1)
+<pre>[H-1] PoW / Block-ID isolation (B3PoW-Scratch v1.1.1)
 ========================================================================
   PASS  [H-1] N CheckProofOfWork call site(s) all use a PoW hash
   PASS  [H-1] PoW path references b3pow_scratch (src/primitives/block.cpp, src/primitives/block.h)

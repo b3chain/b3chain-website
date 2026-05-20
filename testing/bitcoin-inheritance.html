@@ -41,7 +41,7 @@
   <h2>1. Why this matters</h2>
   <p>
     The Phase 11 self-audit covers the things B3Chain
-    <em>changed</em> &mdash; the B3PoW-Scratch v1.1 PoW swap, the new address prefix,
+    <em>changed</em> &mdash; the B3PoW-Scratch v1.1.1 PoW swap, the new address prefix,
     the BIP44 coin_type, the 51% attack scenario. It does
     <strong>not</strong> check that Bitcoin's other security properties are
     still intact after we forked. This page closes that gap.
@@ -116,7 +116,7 @@
   <table>
     <thead><tr><th>What we changed</th><th>Why</th><th>B3Chain-specific test</th></tr></thead>
     <tbody>
-      <tr><td>PoW algorithm (SHA-256d &rarr; <b>B3PoW-Scratch v1.1</b>, memory-hard BLAKE3 variant)</td>
+      <tr><td>PoW algorithm (SHA-256d &rarr; <b>B3PoW-Scratch v1.1.1</b>, memory-hard BLAKE3 variant)</td>
           <td>Reduces ASIC concentration risk in early days &mdash; PoW is bounded by memory bandwidth, not by primitive throughput.</td>
           <td><code>audit-b3pow-isolation.py</code> (H-1), <code>audit-b3pow-budget.py</code> (H-1.1), <code>audit-b3pow-cache.py</code> (H-1.2), <code>audit-b3pow-headers-cap.py</code> (H-1.3), <code>audit-simd-blake3.py</code> (B-1)</td></tr>
       <tr><td>Address HRP (<code>bc</code> &rarr; <code>b3</code>)</td>
@@ -173,7 +173,7 @@ bash contrib/testing/audit/audit-bitcoin-inheritance.sh</pre>
     Three categories of upstream test are expected to fail on B3Chain by design:
   </p>
   <ul>
-    <li><strong>PoW algorithm tests</strong> &mdash; <code>pow_tests.cpp</code> verifies SHA-256d-as-PoW; B3Chain uses B3PoW-Scratch v1.1 (memory-hard BLAKE3 variant). Covered by <code>audit-b3pow-isolation.py</code> and the H-1.1 / H-1.2 / H-1.3 sub-audits.</li>
+    <li><strong>PoW algorithm tests</strong> &mdash; <code>pow_tests.cpp</code> verifies SHA-256d-as-PoW; B3Chain uses B3PoW-Scratch v1.1.1 (memory-hard BLAKE3 variant). Covered by <code>audit-b3pow-isolation.py</code> and the H-1.1 / H-1.2 / H-1.3 sub-audits.</li>
     <li><strong>Mainnet snapshot tests</strong> &mdash; <code>feature_assumeutxo.py</code> and <code>feature_assumevalid.py</code> ship Bitcoin mainnet block hashes / UTXO snapshots that don't exist on B3Chain.</li>
     <li><strong>Hardcoded peer/seed tests</strong> &mdash; e.g. <code>feature_proxy.py</code> uses Bitcoin Tor seeds; replaced once B3Chain seeds are published.</li>
   </ul>
