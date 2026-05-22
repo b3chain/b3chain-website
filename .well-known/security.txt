@@ -9,4 +9,4 @@ Preferred-Languages: en
 Canonical: https://b3chain.org/.well-known/security.txt
 Policy: https://github.com/b3chain/b3chain/blob/b3chain-main/security/bug-bounty.md
 Acknowledgments: https://github.com/b3chain/b3chain/blob/b3chain-main/security/bug-bounty.md#hall-of-fame
-Hiring: https://b3chain.org/careers
+Hiring: mailto:careers@b3chain.org
